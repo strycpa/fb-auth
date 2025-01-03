@@ -1,0 +1,20 @@
+{
+  "name": "fb-auth",
+  "version": "0.0.1",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon index.js",
+    "passport": "nodemon passport.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "p-map": "^7.0.3",
+    "passport": "^0.7.0",
+    "passport-facebook": "^3.0.0"
+  }
+}
