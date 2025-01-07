@@ -9,10 +9,7 @@ const APP_ID = process.env.APP_ID
 const APP_SECRET = process.env.APP_SECRET
 if (!APP_ID || !APP_SECRET) throw new Error('Missing necessary app info in .env')
 const REDIRECT_URL = 'http://localhost:8000/auth/callback'
-const PERMISSIONS = ['public_profile', 'read_insights', 'pages_show_list']
-
-const ADS_LIBRARY_SEARCH = 'Solomon - koření králů'
-const ADS_LIBRARY_REACHED_COUNTRIES = ['CZ']
+const PERMISSIONS = ['public_profile', 'read_insights', 'business_management', 'ads_read']
 
 console.log(`https://www.facebook.com/v21.0/dialog/oauth?client_id=${APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URL)}&state=%7Bstate-param%7D&scope=${PERMISSIONS.join(',')}`)
 
@@ -24,8 +21,7 @@ const fetchGraphApi = async (fragment, accessToken, params = {}) => {
 	}).toString()
 	const response = await fetch(fetchUrl)
 	if (!response.ok) {
-		console.error(await response.json())
-		throw new Error(`Fetch failed with status: ${response.status}`)
+		console.error(`Fetch failed with status: ${response.status}`)
 	}
 	return response.json()
 }
@@ -51,27 +47,20 @@ passport.use(new FacebookStrategy({
 	})
 	console.log('longLivedToken', longLivedToken)
 
-	const pages = await fetchGraphApi('/me/accounts', longLivedToken)
+	const pages = await fetchGraphApi('/me/ ', longLivedToken)
 	console.log('pages', pages)
 
-	const adAccounts = await fetchGraphApi('/me/adaccounts', longLivedToken)
-	console.log('adAccounts', adAccounts)
+	const businesses = await fetchGraphApi('/me/businesses', longLivedToken)
+	console.log('businesses', businesses)
 
-	const allAdAccounts = adAccounts.data // fck paging for now
+	const businesAccounts = businesses.data || []
 
-	console.log('alladaccounts', allAdAccounts)
-	const ads = await Promise.all(allAdAccounts.map(async (adAccount) => {
-		const ads = await fetchGraphApi(`/${adAccount.id}/ads`, longLivedToken)
-		console.log('ads', adAccount.id, ads.data)
-		return {adAccountId: adAccount.id, ads: ads.data}
+	const adAccounts = await Promise.all(businesAccounts.map(async (businessAccount) => {
+		const adAccounts = await fetchGraphApi(`/${businessAccount.id}/owned_ad_accounts`, longLivedToken)
+		console.log('adAccounts', businessAccount.id, adAccounts.data)
+		return {businessAccountId: businessAccount.id, adAccounts: adAccounts.data}
 	}))
-	console.log('all ads', ads)
-
-	const adsLibrary = await fetchGraphApi('/ads_archive', longLivedToken, {
-		search_terms: ADS_LIBRARY_SEARCH,
-		ad_reached_countries: ADS_LIBRARY_REACHED_COUNTRIES,
-	})
-	console.log('ads library', adsLibrary)
+	console.log('all adAccounts', adAccounts)
 
 	return cb()
 }))
