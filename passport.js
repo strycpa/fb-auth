@@ -67,17 +67,8 @@ passport.use(new FacebookStrategy({
 
 app.get('/auth', passport.authenticate('facebook'))
 
-app.get('/auth/failure', (req, res) => {
-	console.log('/auth/failure', req.session.messages)
-	res.end()
-})
-
-app.get('/auth/callback', (req, res, next) => {
-	console.log('/auth/callback 1', req.query)
-	next()
-}, passport.authenticate('facebook', { failureRedirect: '/auth', failureMessage: true }), (req, res) => {
-	console.log('/auth/callback 2', req.session.messages)
-	res.send('Thank you for the token.')
+app.get('/auth/callback', (req, res) => {
+	res.end('Thank you for connecting with us')
 })
 
 app.listen(port, () => console.log(`listening on port ${port}`)) 
