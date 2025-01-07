@@ -9,6 +9,12 @@ const APP_ID = process.env.APP_ID
 const APP_SECRET = process.env.APP_SECRET
 if (!APP_ID || !APP_SECRET) throw new Error('Missing necessary app info in .env')
 const REDIRECT_URL = 'http://localhost:8000/auth/callback'
+const PERMISSIONS = ['public_profile', 'read_insights', 'pages_show_list']
+
+const ADS_LIBRARY_SEARCH = 'Solomon - koření králů'
+const ADS_LIBRARY_REACHED_COUNTRIES = ['CZ']
+
+console.log(`https://www.facebook.com/v21.0/dialog/oauth?client_id=${APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URL)}&state=%7Bstate-param%7D&scope=${PERMISSIONS.join(',')}`)
 
 const fetchGraphApi = async (fragment, accessToken, params = {}) => {
 	const fetchUrl = new URL(`https://graph.facebook.com/v21.0${fragment}`)
@@ -18,6 +24,7 @@ const fetchGraphApi = async (fragment, accessToken, params = {}) => {
 	}).toString()
 	const response = await fetch(fetchUrl)
 	if (!response.ok) {
+		console.error(await response.json())
 		throw new Error(`Fetch failed with status: ${response.status}`)
 	}
 	return response.json()
@@ -29,7 +36,7 @@ passport.use(new FacebookStrategy({
 	clientID: APP_ID,
 	clientSecret: APP_SECRET,
 	callbackURL: REDIRECT_URL,
-	scope: ['public_profile', 'read_insights', 'pages_show_list'],
+	scope: PERMISSIONS,
 }, async (accessToken, refreshToken, profile, cb) => {
 
 	console.log('accessToken', accessToken)
@@ -60,6 +67,12 @@ passport.use(new FacebookStrategy({
 	}))
 	console.log('all ads', ads)
 
+	const adsLibrary = await fetchGraphApi('/ads_archive', longLivedToken, {
+		search_terms: ADS_LIBRARY_SEARCH,
+		ad_reached_countries: ADS_LIBRARY_REACHED_COUNTRIES,
+	})
+	console.log('ads library', adsLibrary)
+
 	return cb()
 }))
 
@@ -79,5 +92,3 @@ app.get('/auth/callback', (req, res, next) => {
 })
 
 app.listen(port, () => console.log(`listening on port ${port}`)) 
-
-// login dialog https://www.facebook.com/v21.0/dialog/oauth?client_id=1273228263993397&redirect_uri=http%3A%2F%2Flocalhost%3A8000%2Fauth%2Fcallback&state=%7Bstate-param%7D&scope=public_profile,read_insights,pages_show_list 
