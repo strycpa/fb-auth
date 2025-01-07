@@ -3,15 +3,15 @@ const express = require('express')
 const passport = require('passport')
 const FacebookStrategy = require('passport-facebook')
 const app = express()
-const port = 8000
+const port = process.env.PORT || 8000
 
 const APP_ID = process.env.APP_ID
 const APP_SECRET = process.env.APP_SECRET
 if (!APP_ID || !APP_SECRET) throw new Error('Missing necessary app info in .env')
-const REDIRECT_URL = 'http://localhost:8000/auth/callback'
-const PERMISSIONS = ['public_profile', 'read_insights', 'business_management', 'ads_read']
+const REDIRECT_URL = process.env.REDIRECT_URL || 'http://localhost:8000/auth/callback'
+const PERMISSIONS = process.env.PERMISSIONS || 'public_profile,read_insights,business_management,ads_read'
 
-console.log(`https://www.facebook.com/v21.0/dialog/oauth?client_id=${APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URL)}&state=%7Bstate-param%7D&scope=${PERMISSIONS.join(',')}`)
+console.log(`https://www.facebook.com/v21.0/dialog/oauth?client_id=${APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URL)}&state=%7Bstate-param%7D&scope=${PERMISSIONS}`)
 
 const fetchGraphApi = async (fragment, accessToken, params = {}) => {
 	const fetchUrl = new URL(`https://graph.facebook.com/v21.0${fragment}`)
@@ -32,12 +32,12 @@ passport.use(new FacebookStrategy({
 	clientID: APP_ID,
 	clientSecret: APP_SECRET,
 	callbackURL: REDIRECT_URL,
-	scope: PERMISSIONS,
+	scope: PERMISSIONS.split(','),
 }, async (accessToken, refreshToken, profile, cb) => {
 
 	console.log('accessToken', accessToken)
 	console.log('refreshToken', refreshToken)
-	console.log('profile', profile)
+	console.log('profile', JSON.stringify(profile))
 
 	const {access_token: longLivedToken} = await fetchGraphApi('/oauth/access_token', accessToken, {
 		grant_type: 'fb_exchange_token',
@@ -48,19 +48,19 @@ passport.use(new FacebookStrategy({
 	console.log('longLivedToken', longLivedToken)
 
 	const pages = await fetchGraphApi('/me/ ', longLivedToken)
-	console.log('pages', pages)
+	console.log('pages', JSON.stringify(pages))
 
 	const businesses = await fetchGraphApi('/me/businesses', longLivedToken)
-	console.log('businesses', businesses)
+	console.log('businesses', JSON.stringify(businesses))
 
 	const businesAccounts = businesses.data || []
 
 	const adAccounts = await Promise.all(businesAccounts.map(async (businessAccount) => {
 		const adAccounts = await fetchGraphApi(`/${businessAccount.id}/owned_ad_accounts`, longLivedToken)
-		console.log('adAccounts', businessAccount.id, adAccounts.data)
+		console.log('adAccounts', businessAccount.id, JSON.stringify(adAccounts.data))
 		return {businessAccountId: businessAccount.id, adAccounts: adAccounts.data}
 	}))
-	console.log('all adAccounts', adAccounts)
+	console.log('all adAccounts', JSON.stringify(adAccounts))
 
 	return cb()
 }))
