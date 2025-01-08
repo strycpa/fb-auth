@@ -13,6 +13,7 @@
   "dependencies": {
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "express-session": "^1.18.1",
     "p-map": "^7.0.3",
     "passport": "^0.7.0",
     "passport-facebook": "^3.0.0"
