@@ -1,5 +1,6 @@
 require('dotenv').config()
 const express = require('express')
+const session = require('express-session')
 const passport = require('passport')
 const FacebookStrategy = require('passport-facebook')
 const app = express()
@@ -27,7 +28,8 @@ const fetchGraphApi = async (fragment, accessToken, params = {}) => {
 }
 
 passport.initialize({ userProperty: 'profile' })
-
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((user, done) => done(null, user));
 passport.use(new FacebookStrategy({
 	clientID: APP_ID,
 	clientSecret: APP_SECRET,
@@ -39,7 +41,7 @@ passport.use(new FacebookStrategy({
 	console.log('refreshToken', refreshToken)
 	console.log('profile', JSON.stringify(profile))
 
-	const {access_token: longLivedToken} = await fetchGraphApi('/oauth/access_token', accessToken, {
+	const { access_token: longLivedToken } = await fetchGraphApi('/oauth/access_token', accessToken, {
 		grant_type: 'fb_exchange_token',
 		client_id: APP_ID,
 		client_secret: APP_SECRET,
@@ -58,17 +60,35 @@ passport.use(new FacebookStrategy({
 	const adAccounts = await Promise.all(businesAccounts.map(async (businessAccount) => {
 		const adAccounts = await fetchGraphApi(`/${businessAccount.id}/owned_ad_accounts`, longLivedToken)
 		console.log('adAccounts', businessAccount.id, JSON.stringify(adAccounts.data))
-		return {businessAccountId: businessAccount.id, adAccounts: adAccounts.data}
+		return { businessAccountId: businessAccount.id, adAccounts: adAccounts.data }
 	}))
 	console.log('all adAccounts', JSON.stringify(adAccounts))
 
-	return cb()
+	return cb(null, profile._json)
 }))
 
-app.get('/auth', passport.authenticate('facebook'))
+app.use(session({
+	secret: 'keyboard cat',
+	resave: false,
+	saveUninitialized: true,
+	cookie: { secure: false }
+}))
+app.use(passport.session());
+app.use(passport.initialize());
 
-app.get('/auth/callback', (req, res) => {
-	res.end('Thank you for connecting with us')
+app.get('/', (req, res) => {
+	if (req.user) {
+		res.end('Thank you for connecting with us')
+	} else {
+		res.redirect('/auth')
+	}
 })
+app.get('/auth', passport.authenticate('facebook'))
+app.get(
+	'/auth/callback',
+	passport.authenticate('facebook', { failureRedirect: '/auth', failureMessage: true }),
+	(req, res) => res.redirect('/')
+);
+
 
 app.listen(port, () => console.log(`listening on port ${port}`)) 
