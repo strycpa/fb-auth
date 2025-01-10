@@ -3,6 +3,7 @@ const express = require('express')
 const session = require('express-session')
 const passport = require('passport')
 const FacebookStrategy = require('passport-facebook')
+const {Firestore} = require('@google-cloud/firestore')
 const app = express()
 const port = process.env.PORT || 8000
 
@@ -13,6 +14,9 @@ const REDIRECT_URL = process.env.REDIRECT_URL || 'http://localhost:8000/auth/cal
 const PERMISSIONS = process.env.PERMISSIONS || 'public_profile,read_insights,business_management,ads_read'
 
 console.log(`https://www.facebook.com/v21.0/dialog/oauth?client_id=${APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URL)}&state=%7Bstate-param%7D&scope=${PERMISSIONS}`)
+
+const firestore = new Firestore()
+const tokensFacebookCollection = firestore.collection('tokens_facebook')
 
 const fetchGraphApi = async (fragment, accessToken, params = {}) => {
 	const fetchUrl = new URL(`https://graph.facebook.com/v21.0${fragment}`)
@@ -36,6 +40,7 @@ passport.use(new FacebookStrategy({
 	callbackURL: REDIRECT_URL,
 	scope: PERMISSIONS.split(','),
 }, async (accessToken, refreshToken, profile, cb) => {
+	const NOW = new Date()
 
 	console.log('accessToken', accessToken)
 	console.log('refreshToken', refreshToken)
@@ -49,8 +54,32 @@ passport.use(new FacebookStrategy({
 	})
 	console.log('longLivedToken', longLivedToken)
 
-	const pages = await fetchGraphApi('/me/ ', longLivedToken)
-	console.log('pages', JSON.stringify(pages))
+	const me = await fetchGraphApi('/me', longLivedToken)
+	console.log('me', JSON.stringify(me))
+
+	const userId = me.id
+	
+	const existingTokens = await tokensFacebookCollection.where('user_id', '==', userId).limit(1).get()
+	if (existingTokens.empty) {
+		console.log('storing a new token to firestore')
+		await tokensFacebookCollection.add({
+			access_token: longLivedToken,
+			user_id: userId,
+			app_id: APP_ID,
+			permissions: PERMISSIONS.split(','),
+			created_at: NOW,
+		})
+	} else {
+		console.log('updating an existing token already stored in firestore')
+		await existingTokens.forEach((existingToken) => {
+			existingToken.ref.update({
+				access_token: longLivedToken,
+				app_id: APP_ID,
+				permissions: PERMISSIONS.split(','),
+				updated_at: NOW,
+			})
+		})
+	}
 
 	const businesses = await fetchGraphApi('/me/businesses', longLivedToken)
 	console.log('businesses', JSON.stringify(businesses))
