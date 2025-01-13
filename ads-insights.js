@@ -51,7 +51,7 @@ const createFetchGraphApi = (accessToken) => (fragment, params) => fetchGraphApi
 		const creativeId = creative.creative.id
 		const creativeDetail = await f(`/${creativeId}/`, {fields: ['id', 'name', 'object_type', 'object_url', 'image_url', 'link_url', 'video_id']})
 		if (creativeDetail.object_type === 'VIDEO') {
-			const videoInsights = await f(`/${creativeDetail.video_id}/`, {fields: ['video_insights', 'post_id', 'collaborators']})
+			const videoInsights = await f(`/${creativeDetail.video_id}/`, {fields: ['video_insights', 'post_id', 'collaborators', 'permalink_url']})
 			return {adAccountId, adId, creativeId, creativeDetail, videoInsights}
 		}
 		return {adAccountId, adId, creativeId, creativeDetail}

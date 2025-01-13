@@ -11,7 +11,7 @@ const APP_ID = process.env.APP_ID
 const APP_SECRET = process.env.APP_SECRET
 if (!APP_ID || !APP_SECRET) throw new Error('Missing necessary app info in .env')
 const REDIRECT_URL = process.env.REDIRECT_URL || 'http://localhost:8000/auth/callback'
-const PERMISSIONS = process.env.PERMISSIONS || 'public_profile,read_insights,business_management,ads_read'
+const PERMISSIONS = process.env.PERMISSIONS || 'public_profile,read_insights,business_management,ads_read,pages_read_engagement'
 
 console.log(`https://www.facebook.com/v21.0/dialog/oauth?client_id=${APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URL)}&state=%7Bstate-param%7D&scope=${PERMISSIONS}`)
 
@@ -30,6 +30,7 @@ const fetchGraphApi = async (fragment, accessToken, params = {}) => {
 	}
 	return response.json()
 }
+const createFetchGraphApi = (accessToken) => (fragment, params) => fetchGraphApi(fragment, accessToken, params)
 
 passport.initialize({ userProperty: 'profile' })
 passport.serializeUser((user, done) => done(null, user));
@@ -54,7 +55,9 @@ passport.use(new FacebookStrategy({
 	})
 	console.log('longLivedToken', longLivedToken)
 
-	const me = await fetchGraphApi('/me', longLivedToken)
+	const f = createFetchGraphApi(longLivedToken)
+
+	const me = await f('/me')
 	console.log('me', JSON.stringify(me))
 
 	const userId = me.id
@@ -81,19 +84,46 @@ passport.use(new FacebookStrategy({
 		})
 	}
 
-	const businesses = await fetchGraphApi('/me/businesses', longLivedToken)
+	const businesses = await f('/me/businesses')
 	console.log('businesses', JSON.stringify(businesses))
 
 	const businesAccounts = businesses.data || []
 
-	const adAccounts = await Promise.all(businesAccounts.map(async (businessAccount) => {
-		const adAccounts = await fetchGraphApi(`/${businessAccount.id}/owned_ad_accounts`, longLivedToken)
-		console.log('adAccounts', businessAccount.id, JSON.stringify(adAccounts.data))
-		return { businessAccountId: businessAccount.id, adAccounts: adAccounts.data }
+	const businessAdAccounts = await Promise.all(businesAccounts.map(async (businessAccount) => {
+		const businessAdAccounts = await f(`/${businessAccount.id}/owned_ad_accounts`)
+		console.log('businessAdAccounts', businessAccount.id, JSON.stringify(businessAdAccounts.data))
+		return { businessAccountId: businessAccount.id, businessAdAccounts: businessAdAccounts.data }
 	}))
-	console.log('all adAccounts', JSON.stringify(adAccounts))
+	console.log('all businessAdAccounts', JSON.stringify(businessAdAccounts))
 
-	return cb(null, profile._json)
+
+
+	// #region creatives taken from ads-insights
+	const adAccounts = await f('/me/adaccounts', {fields: ['id', 'name']})
+	console.log('adAccounts'); console.dir(adAccounts, {depth: null})
+	const adAccountAds = await Promise.all(adAccounts.data.map(async (adAccount) => {
+		const adAccountId = adAccount.id
+		const ads = await f(`/${adAccount.id}/ads`, {fields:['id', 'name', 'ad_account_id']})
+		return {adAccountId, ads}
+	}))
+	console.log('adAccountAds'); console.dir(adAccountAds, {depth: null})
+	const creatives = await Promise.all(adAccountAds.map(async ({adAccountId, ads}) => Promise.all(ads.data.map(async (ad) => {
+		const adId = ad.id
+		const creative = await f(`/${adId}/`, {fields: ['id', 'name', 'creative']})
+		const creativeId = creative.creative.id
+		const creativeDetail = await f(`/${creativeId}/`, {fields: ['id', 'name', 'object_type', 'object_url', 'image_url', 'link_url', 'video_id']})
+		if (creativeDetail.object_type === 'VIDEO') {
+			const videoInsights = await f(`/${creativeDetail.video_id}/`, {fields: ['video_insights', 'post_id', 'collaborators', 'permalink_url']})
+			return {adAccountId, adId, creativeId, creativeDetail, videoInsights}
+		}
+		return {adAccountId, adId, creativeId, creativeDetail}
+	}))))
+	console.log('creatives'); console.dir(creatives, {depth: null})
+	// #endregion creatives taken from ads-insights
+
+
+
+	return cb(null, {profile: profile._json, creatives})
 }))
 
 app.use(session({
@@ -107,7 +137,7 @@ app.use(passport.initialize());
 
 app.get('/', (req, res) => {
 	if (req.user) {
-		res.end('Thank you for connecting with us')
+		res.json(req.user.creatives)
 	} else {
 		res.redirect('/auth')
 	}
