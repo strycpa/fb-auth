@@ -37,24 +37,24 @@ const createFetchGraphApi = (accessToken) => (fragment, params) => fetchGraphApi
 	const {access_token: accessToken} = snapshot.docs[0].data()
 	const f = createFetchGraphApi(accessToken)
 
-	const adAccounts = await f('/me/adaccounts')
-	console.log('adaccounts', adAccounts)
+	const adAccounts = await f('/me/adaccounts', {fields: ['id', 'name']})
+	console.log('adAccounts'); console.dir(adAccounts, {depth: null})
 	const adAccountAds = await Promise.all(adAccounts.data.map(async (adAccount) => {
 		const adAccountId = adAccount.id
-		const ads = await f(`/${adAccount.id}/ads`, {fields:['id', 'ad_account_id']})
+		const ads = await f(`/${adAccount.id}/ads`, {fields:['id', 'name', 'ad_account_id']})
 		return {adAccountId, ads}
 	}))
 	console.log('adAccountAds'); console.dir(adAccountAds, {depth: null})
 	const creatives = await Promise.all(adAccountAds.map(async ({adAccountId, ads}) => Promise.all(ads.data.map(async (ad) => {
 		const adId = ad.id
-		const creative = await f(`/${adId}/`, {fields: ['id', 'creative']})
+		const creative = await f(`/${adId}/`, {fields: ['id', 'name', 'creative']})
 		const creativeId = creative.creative.id
-		const creativeDetail = await f(`/${creativeId}/`, {fields: ['id', 'object_type', 'object_url', 'image_url', 'link_url', 'video_id']})
+		const creativeDetail = await f(`/${creativeId}/`, {fields: ['id', 'name', 'object_type', 'object_url', 'image_url', 'link_url', 'video_id']})
 		if (creativeDetail.object_type === 'VIDEO') {
 			const videoInsights = await f(`/${creativeDetail.video_id}/`, {fields: ['video_insights', 'post_id', 'collaborators']})
-			return {adId, creativeId, creativeDetail, videoInsights}
+			return {adAccountId, adId, creativeId, creativeDetail, videoInsights}
 		}
-		return {adId, creativeId, creativeDetail}
+		return {adAccountId, adId, creativeId, creativeDetail}
 	}))))
 	console.log('creatives'); console.dir(creatives, {depth: null})
 })()
