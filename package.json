@@ -5,6 +5,7 @@
   "scripts": {
     "start": "nodemon index.js",
     "passport": "nodemon passport.js",
+    "ads-insights": "nodemon ads-insights.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
