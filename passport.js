@@ -4,6 +4,7 @@ const session = require('express-session')
 const passport = require('passport')
 const FacebookStrategy = require('passport-facebook')
 const {Firestore} = require('@google-cloud/firestore')
+const dateFns = require('date-fns')
 const app = express()
 const port = process.env.PORT || 8000
 
@@ -126,8 +127,28 @@ passport.use(new FacebookStrategy({
 	// #endregion creatives taken from ads-insights
 
 
+	// #region insights
+	const insights = await Promise.all(adAccountAds.map(async ({adAccountId, ads}) => Promise.all(ads.data.map(async (ad) => {
+		const adId = ad.id
+		const totalInsights = await f(`/${adId}/insights`, {fields: ['ad_id', 'spend', 'impressions', 'reach']})
+		
+		const minStart = Math.min(totalInsights.data.map(({date_start}) => new Date(date_start).getTime()))
+		const maxStop = Math.max(totalInsights.data.map(({date_stop}) => new Date(date_stop).getTime()))
+		const dateFormat = 'yyyy-MM-dd'
+		const dailyInsights = await f(`/${adId}/insights`, {
+			fields: ['ad_id', 'spend', 'impressions', 'reach'], 
+			time_range: JSON.stringify({since: dateFns.format(minStart, dateFormat), until: dateFns.format(maxStop, dateFormat)}), 
+			time_increment: 1,	// yay, this param is responsible for the daily breakdown
+		})
+			
+		return {adAccountId, adId, totalInsights, dailyInsights}
+	}))))
+	console.log('insights'); console.dir(insights, {depth: null})
+	// #endregion insights
 
-	return cb(null, {profile: profile._json, creatives})
+
+
+	return cb(null, {profile: profile._json, data: {creatives, insights}})
 }))
 
 app.use(session({
@@ -141,7 +162,7 @@ app.use(passport.initialize());
 
 app.get('/', (req, res) => {
 	if (req.user) {
-		res.json(req.user.creatives)
+		res.json(req.user.data)
 	} else {
 		res.redirect('/auth')
 	}
