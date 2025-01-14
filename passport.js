@@ -16,7 +16,6 @@ const PERMISSIONS = process.env.PERMISSIONS || 'public_profile,read_insights,bus
 console.log(`https://www.facebook.com/v21.0/dialog/oauth?client_id=${APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URL)}&state=%7Bstate-param%7D&scope=${PERMISSIONS}`)
 
 const firestore = new Firestore()
-const tokensFacebookCollection = firestore.collection('tokens_facebook')
 
 const fetchGraphApi = async (fragment, accessToken, params = {}) => {
 	const fetchUrl = new URL(`https://graph.facebook.com/v21.0${fragment}`)
@@ -62,10 +61,17 @@ passport.use(new FacebookStrategy({
 
 	const userId = me.id
 	
-	const existingTokens = await tokensFacebookCollection.where('user_id', '==', userId).limit(1).get()
-	if (existingTokens.empty) {
+	// tokens/facebook/apps/{appid}/users/{userid}/{token}
+	const {collectionPath, docId} = ((network, appId, userId) => ({
+		collectionPath: `tokens/${network}/apps/${appId}/users`,
+		docId: `${userId}`,
+	}))('facebook', APP_ID, userId)
+
+	const collection = firestore.collection(collectionPath)
+	const existingToken = await collection.doc(docId).get()
+	if (!existingToken.exists) {
 		console.log('storing a new token to firestore')
-		await tokensFacebookCollection.add({
+		await existingToken.ref.create({
 			access_token: longLivedToken,
 			user_id: userId,
 			app_id: APP_ID,
@@ -74,13 +80,11 @@ passport.use(new FacebookStrategy({
 		})
 	} else {
 		console.log('updating an existing token already stored in firestore')
-		await existingTokens.forEach((existingToken) => {
-			existingToken.ref.update({
-				access_token: longLivedToken,
-				app_id: APP_ID,
-				permissions: PERMISSIONS.split(','),
-				updated_at: NOW,
-			})
+		await existingToken.ref.update({
+			access_token: longLivedToken,
+			app_id: APP_ID,
+			permissions: PERMISSIONS.split(','),
+			updated_at: NOW,
 		})
 	}
 
