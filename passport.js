@@ -6,6 +6,7 @@ const FacebookStrategy = require('passport-facebook')
 const {Firestore} = require('@google-cloud/firestore')
 const dateFns = require('date-fns')
 const {TokensStore} = require('./lib/tokens-store')
+const {fetchGraphApi, createFetchGraphApi} = require('./src/remote/facebook-remote')
 const app = express()
 const port = process.env.PORT || 8000
 
@@ -18,20 +19,6 @@ const PERMISSIONS = process.env.PERMISSIONS || 'public_profile,read_insights,bus
 console.log(`https://www.facebook.com/v21.0/dialog/oauth?client_id=${APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URL)}&state=%7Bstate-param%7D&scope=${PERMISSIONS}`)
 
 const firestore = new Firestore()
-
-const fetchGraphApi = async (fragment, accessToken, params = {}) => {
-	const fetchUrl = new URL(`https://graph.facebook.com/v21.0${fragment}`)
-	fetchUrl.search = new URLSearchParams({
-		access_token: accessToken,
-		...params
-	}).toString()
-	const response = await fetch(fetchUrl)
-	if (!response.ok) {
-		console.error(`Fetch failed with status: ${response.status}`)
-	}
-	return response.json()
-}
-const createFetchGraphApi = (accessToken) => (fragment, params) => fetchGraphApi(fragment, accessToken, params)
 
 passport.initialize({ userProperty: 'profile' })
 passport.serializeUser((user, done) => done(null, user));
