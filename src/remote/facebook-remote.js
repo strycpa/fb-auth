@@ -1,6 +1,8 @@
+const SocialNetworkError = require('../../lib/error')
+
 const EMPTY_CURSOR = 'MAZDZD'	// facebook's magic cursor value which signals the next page is empty
 
-export const fetchGraphApi = async (fragment, accessToken, params = {}) => {
+const fetchGraphApi = async (fragment, accessToken, params = {}) => {
 	const fetchUrl = new URL(`https://graph.facebook.com/v21.0${fragment}`)
 	fetchUrl.search = new URLSearchParams({
 		access_token: accessToken,
@@ -9,7 +11,7 @@ export const fetchGraphApi = async (fragment, accessToken, params = {}) => {
 	const response = await fetch(fetchUrl)
 	if (!response.ok) {
 		console.error(`Fetch failed with status: ${response.status}`)
-		console.error(await response.json())
+		throw new SocialNetworkError(await response.json())
 	}
 	const json = await response.json()
 	const {data, paging} = json
@@ -23,4 +25,9 @@ export const fetchGraphApi = async (fragment, accessToken, params = {}) => {
 	return data
 }
 
-export const createFetchGraphApi = (accessToken) => (fragment, params) => fetchGraphApi(fragment, accessToken, params)
+const createFetchGraphApi = (accessToken) => (fragment, params) => fetchGraphApi(fragment, accessToken, params)
+
+module.exports = {
+	fetchGraphApi,
+	createFetchGraphApi,
+}

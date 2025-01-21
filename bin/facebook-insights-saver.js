@@ -11,6 +11,11 @@ const AD_ACCOUNT_SOURCES = {
 	'business': 'business',
 }
 
+const PERIODS = {
+	'daily': 'daily',
+	'lifetime': 'lifetime',
+}
+
 const BREAKDOWNS = [
 	['age', 'gender'],
 	['country', 'region']
@@ -38,17 +43,34 @@ const tokensStore = new TokensStore(firestore, 'facebook')
 		}
 	}
 
+	const fetchInsights = async (period, breakdowns) => {
+		const payload = {
+			fields: ['ad_id', 'account_id', ...metrics.facebook.ads.insights], 
+			breakdowns,
+		}
+		if (period === PERIODS.daily) {
+			payload.time_increment = 1
+		}
+		return paralellize(ads, ({id}) => fetchGraphApi(`/${id}/insights`, payload))
+	}
+
 	const adAccounts = await fetchAdAccounts(AD_ACCOUNT_SOURCES.personal)
 	console.log('adAccounts'); console.dir(adAccounts, {depth: null})
-	const ads = (await paralellize(adAccounts, ({id}) => fetchGraphApi(`/${id}/ads`, {
-		fields: ['ad_id', 'account_id', `insights{${metrics.facebook.ads.insights.join(',')}}`]
-	}))).flat()
+	const ads = (await paralellize(adAccounts, ({id}) => fetchGraphApi(`/${id}/ads`, {fields: ['ad_id']}))).flat()	// one unnecesasry extra call that allows us to paralellize more effectively all the breakdowns - we need the ad ids
 	console.log('ads'); console.dir(ads, {depth: null})
-	const dailyAds = (await paralellize(ads, ({id}) => fetchGraphApi(`/${id}/insights`, {
-		fields: ['ad_id', 'account_id', ...metrics.facebook.ads.insights], 
-		time_increment: 1,
-	}))).flat()
-	console.log('dailyAds'); console.dir(dailyAds, {depth: null})
+
+	// const lifetimeAds = (await paralellize(adAccounts, ({id}) => fetchGraphApi(`/${id}/ads`, {
+	// 	fields: ['ad_id', 'account_id', `insights{${metrics.facebook.ads.insights.join(',')}}`]
+	// }))).flat()
+	// console.log('ads'); console.dir(ads, {depth: null})
+	// const dailyAds = (await paralellize(ads, ({id}) => fetchGraphApi(`/${id}/insights`, {
+	// 	fields: ['ad_id', 'account_id', ...metrics.facebook.ads.insights], 
+	// 	time_increment: 1,
+	// }))).flat()
+	// console.log('dailyAds'); console.dir(dailyAds, {depth: null})
 	
-	// paralellize(['lifetime', 'daily'], (period) => paralellize(BREAKDOWNS, (breakdown) => fetchInsights(period, breakdown)))
+	const brokenDownInsights = (await paralellize(Object.keys(PERIODS), (period) => paralellize(BREAKDOWNS, (breakdown) => {
+		return fetchInsights(period, breakdown)
+	}))).flat().flat().flat()
+	console.log('brokenDownInsights'); console.dir(brokenDownInsights, {depth: null})
 })()
