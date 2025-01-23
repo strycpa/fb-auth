@@ -48,6 +48,7 @@ class RequestQueue {
 		if (this.requests.length === 0) return true
 
 		const score = this.requests.reduce((acc, req) => acc + req.score, 0)
+		console.log('score', score)
 		if (score > this.maxScore) {
 			this.block()
 			await new Promise((resolve) => setTimeout(resolve, this.blockSeconds * 1000))

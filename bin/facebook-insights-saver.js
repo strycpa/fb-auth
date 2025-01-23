@@ -1,10 +1,13 @@
 require('dotenv').config()
 
 const {Firestore} = require('@google-cloud/firestore')
+
+const config = require('../config')
 const {TokensStore} = require('../lib/tokens-store')
 const {createFetchGraphApi} = require('../src/remote/facebook-remote')
 const {paralellize} = require('../lib/utils')
-const {metrics} = require('../lib/const/metrics')
+const zodSchemas = require('../lib/zod-shemas')
+const bigQuery = require('../lib/bigquery')
 
 const AD_ACCOUNT_SOURCES = {
 	'personal': 'personal',
@@ -43,34 +46,54 @@ const tokensStore = new TokensStore(firestore, 'facebook')
 		}
 	}
 
-	const fetchInsights = async (period, breakdowns) => {
+	const fetchAdInsights = async (adId, period, breakdowns) => {
+		const metrics = Object.keys(zodSchemas.metrics)
 		const payload = {
-			fields: ['ad_id', 'account_id', ...metrics.facebook.ads.insights], 
+			fields: metrics, 
 			breakdowns,
 		}
 		if (period === PERIODS.daily) {
 			payload.time_increment = 1
 		}
-		return paralellize(ads, ({id}) => fetchGraphApi(`/${id}/insights`, payload))
+		return fetchGraphApi(`/${adId}/insights`, payload)
 	}
 
 	const adAccounts = await fetchAdAccounts(AD_ACCOUNT_SOURCES.personal)
 	console.log('adAccounts'); console.dir(adAccounts, {depth: null})
-	const ads = (await paralellize(adAccounts, ({id}) => fetchGraphApi(`/${id}/ads`, {fields: ['ad_id']}))).flat()	// one unnecesasry extra call that allows us to paralellize more effectively all the breakdowns - we need the ad ids
-	console.log('ads'); console.dir(ads, {depth: null})
 
-	// const lifetimeAds = (await paralellize(adAccounts, ({id}) => fetchGraphApi(`/${id}/ads`, {
-	// 	fields: ['ad_id', 'account_id', `insights{${metrics.facebook.ads.insights.join(',')}}`]
-	// }))).flat()
-	// console.log('ads'); console.dir(ads, {depth: null})
-	// const dailyAds = (await paralellize(ads, ({id}) => fetchGraphApi(`/${id}/insights`, {
-	// 	fields: ['ad_id', 'account_id', ...metrics.facebook.ads.insights], 
-	// 	time_increment: 1,
-	// }))).flat()
-	// console.log('dailyAds'); console.dir(dailyAds, {depth: null})
+	const ads = (await paralellize(adAccounts, ({id}) => fetchGraphApi(`/${id}/ads`, {fields: ['ad_id', 'account_id']}))).flat()	// one unnecesasry extra call that allows us to paralellize more effectively all the breakdowns - we need the ad ids
+	console.log('ads'); console.dir(ads, {depth: null})
 	
-	const brokenDownInsights = (await paralellize(Object.keys(PERIODS), (period) => paralellize(BREAKDOWNS, (breakdown) => {
-		return fetchInsights(period, breakdown)
-	}))).flat().flat().flat()
+	const brokenDownInsights = (await 
+		paralellize(Object.keys(PERIODS), async (period) => 
+			paralellize(BREAKDOWNS, async (breakdowns) => 
+				paralellize(ads, async (ad) => {
+					return {
+						user_id: USER_ID,
+						ad_account_id: ad.account_id,
+						ad_id: ad.id,
+						period,
+						breakdowns,
+						insights: await fetchAdInsights(ad.id, period, breakdowns)
+					}
+				}
+	)))).flat().flat().flat().flat()
 	console.log('brokenDownInsights'); console.dir(brokenDownInsights, {depth: null})
+	
+	require('fs').writeFileSync('brokenDownInsights', JSON.stringify(brokenDownInsights, null, 2))
+
+	const tables = {}
+	await Promise.all(brokenDownInsights.map(async (data) => {
+		const {breakdowns, period} = data
+		const breakdownName = breakdowns.join('_')
+		const tableName = `facebook_ads_insights_${period}_${breakdownName}`
+		if (!tables[tableName]) {
+			const fullyQualifiedTableName = `${config.projectId}.facebook_ads_insights.${tableName}`
+			const schema = zodSchemas.schemas[tableName]
+			const table = await bigQuery.getTable(fullyQualifiedTableName, schema)
+			tables[tableName] = table
+		}
+		const table = tables[tableName]
+		await table.insert(data)
+	}))
 })()
