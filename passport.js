@@ -5,6 +5,8 @@ const passport = require('passport')
 const FacebookStrategy = require('passport-facebook')
 const {Firestore} = require('@google-cloud/firestore')
 const dateFns = require('date-fns')
+const {TokensStore} = require('./lib/tokens-store')
+const {fetchGraphApi, createFetchGraphApi} = require('./src/remote/facebook-remote')
 const app = express()
 const port = process.env.PORT || 8000
 
@@ -18,20 +20,6 @@ console.log(`https://www.facebook.com/v21.0/dialog/oauth?client_id=${APP_ID}&red
 
 const firestore = new Firestore()
 
-const fetchGraphApi = async (fragment, accessToken, params = {}) => {
-	const fetchUrl = new URL(`https://graph.facebook.com/v21.0${fragment}`)
-	fetchUrl.search = new URLSearchParams({
-		access_token: accessToken,
-		...params
-	}).toString()
-	const response = await fetch(fetchUrl)
-	if (!response.ok) {
-		console.error(`Fetch failed with status: ${response.status}`)
-	}
-	return response.json()
-}
-const createFetchGraphApi = (accessToken) => (fragment, params) => fetchGraphApi(fragment, accessToken, params)
-
 passport.initialize({ userProperty: 'profile' })
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => done(null, user));
@@ -41,8 +29,6 @@ passport.use(new FacebookStrategy({
 	callbackURL: REDIRECT_URL,
 	scope: PERMISSIONS.split(','),
 }, async (accessToken, refreshToken, profile, cb) => {
-	const NOW = new Date()
-
 	console.log('accessToken', accessToken)
 	console.log('refreshToken', refreshToken)
 	console.log('profile', JSON.stringify(profile))
@@ -62,32 +48,8 @@ passport.use(new FacebookStrategy({
 
 	const userId = me.id
 	
-	// tokens/facebook/apps/{appid}/users/{userid}/{token}
-	const {collectionPath, docId} = ((network, appId, userId) => ({
-		collectionPath: `tokens/${network}/apps/${appId}/users`,
-		docId: `${userId}`,
-	}))('facebook', APP_ID, userId)
-
-	const collection = firestore.collection(collectionPath)
-	const existingToken = await collection.doc(docId).get()
-	if (!existingToken.exists) {
-		console.log('storing a new token to firestore')
-		await existingToken.ref.create({
-			access_token: longLivedToken,
-			user_id: userId,
-			app_id: APP_ID,
-			permissions: PERMISSIONS.split(','),
-			created_at: NOW,
-		})
-	} else {
-		console.log('updating an existing token already stored in firestore')
-		await existingToken.ref.update({
-			access_token: longLivedToken,
-			app_id: APP_ID,
-			permissions: PERMISSIONS.split(','),
-			updated_at: NOW,
-		})
-	}
+	const tokensStore = new TokensStore(firestore, 'facebook')
+	await tokensStore.saveToken(userId, APP_ID, longLivedToken, PERMISSIONS.split(','))
 
 	const businesses = await f('/me/businesses')
 	console.log('businesses', JSON.stringify(businesses))

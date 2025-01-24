@@ -6,19 +6,24 @@
     "start": "nodemon index.js",
     "passport": "nodemon passport.js",
     "ads-insights": "nodemon ads-insights.js",
+    "facebook-insights-saver": "nodemon bin/facebook-insights-saver.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@google-cloud/bigquery": "^7.9.1",
     "@google-cloud/firestore": "^7.11.0",
+    "apify": "^3.2.6",
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "express-session": "^1.18.1",
+    "lodash": "^4.17.21",
     "p-map": "^7.0.3",
     "passport": "^0.7.0",
-    "passport-facebook": "^3.0.0"
+    "passport-facebook": "^3.0.0",
+    "zod": "^3.24.1"
   }
 }
