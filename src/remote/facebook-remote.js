@@ -89,6 +89,7 @@ const fetchGraphApi = async (fragment, accessToken, params = {}) => {
 	}
 	const json = await response.json()
 	const {data, paging} = json
+	if (!paging) return json
 	if (paging?.cursors?.after && paging.cursors.after !== EMPTY_CURSOR) {
 		const secondResponse = await fetchGraphApi(fragment, accessToken, {
 			...params,

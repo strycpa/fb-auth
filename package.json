@@ -7,7 +7,8 @@
     "passport": "nodemon passport.js",
     "ads-insights": "nodemon ads-insights.js",
     "facebook-insights-saver": "nodemon bin/facebook-insights-saver.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "frontend": "nodemon server.js"
   },
   "author": "",
   "license": "ISC",
