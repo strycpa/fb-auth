@@ -6,7 +6,7 @@ const FacebookStrategy = require('passport-facebook')
 const {Firestore} = require('@google-cloud/firestore')
 const dateFns = require('date-fns')
 const {TokensRepository} = require('./src/repository/facebook-tokens-repository')
-const {fetchGraphApi, createFetchGraphApi} = require('./src/remote/facebook-remote')
+const FacebookRemote = require('./src/remote/facebook-remote')
 const app = express()
 const port = process.env.PORT || 8000
 
@@ -19,6 +19,7 @@ const PERMISSIONS = process.env.PERMISSIONS || 'public_profile,read_insights,bus
 console.log(`https://www.facebook.com/v21.0/dialog/oauth?client_id=${APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URL)}&state=%7Bstate-param%7D&scope=${PERMISSIONS}`)
 
 const firestore = new Firestore()
+const facebookRemote = new FacebookRemote()
 
 passport.initialize({ userProperty: 'profile' })
 passport.serializeUser((user, done) => done(null, user));
@@ -33,7 +34,7 @@ passport.use(new FacebookStrategy({
 	console.log('refreshToken', refreshToken)
 	console.log('profile', JSON.stringify(profile))
 
-	const { access_token: longLivedToken } = await fetchGraphApi('/oauth/access_token', accessToken, {
+	const { access_token: longLivedToken } = await facebookRemote.fetchGraphApi('/oauth/access_token', accessToken, {
 		grant_type: 'fb_exchange_token',
 		client_id: APP_ID,
 		client_secret: APP_SECRET,
@@ -41,7 +42,7 @@ passport.use(new FacebookStrategy({
 	})
 	console.log('longLivedToken', longLivedToken)
 
-	const f = createFetchGraphApi(longLivedToken)
+	const f = facebookRemote.createFetchGraphApi(longLivedToken)
 
 	const me = await f('/me')
 	console.log('me', JSON.stringify(me))
@@ -54,12 +55,12 @@ passport.use(new FacebookStrategy({
 	const businesses = await f('/me/businesses')
 	console.log('businesses', JSON.stringify(businesses))
 
-	const businesAccounts = businesses.data || []
+	const businesAccounts = businesses || []
 
 	const businessAdAccounts = await Promise.all(businesAccounts.map(async (businessAccount) => {
 		const businessAdAccounts = await f(`/${businessAccount.id}/owned_ad_accounts`)
-		console.log('businessAdAccounts', businessAccount.id, JSON.stringify(businessAdAccounts.data))
-		return { businessAccountId: businessAccount.id, businessAdAccounts: businessAdAccounts.data }
+		console.log('businessAdAccounts', businessAccount.id, JSON.stringify(businessAdAccounts))
+		return { businessAccountId: businessAccount.id, businessAdAccounts: businessAdAccounts }
 	}))
 	console.log('all businessAdAccounts', JSON.stringify(businessAdAccounts))
 
@@ -68,13 +69,13 @@ passport.use(new FacebookStrategy({
 	// #region creatives taken from ads-insights
 	const adAccounts = await f('/me/adaccounts', {fields: ['id', 'name']})
 	console.log('adAccounts'); console.dir(adAccounts, {depth: null})
-	const adAccountAds = await Promise.all(adAccounts.data.map(async (adAccount) => {
+	const adAccountAds = await Promise.all(adAccounts.map(async (adAccount) => {
 		const adAccountId = adAccount.id
 		const ads = await f(`/${adAccount.id}/ads`, {fields:['id', 'name', 'ad_account_id']})
 		return {adAccountId, ads}
 	}))
 	console.log('adAccountAds'); console.dir(adAccountAds, {depth: null})
-	const creatives = await Promise.all(adAccountAds.map(async ({adAccountId, ads}) => Promise.all(ads.data.map(async (ad) => {
+	const creatives = await Promise.all(adAccountAds.map(async ({adAccountId, ads}) => Promise.all(ads.map(async (ad) => {
 		const adId = ad.id
 		const creative = await f(`/${adId}/`, {fields: ['id', 'name', 'creative']})
 		const creativeId = creative.creative.id
@@ -90,12 +91,12 @@ passport.use(new FacebookStrategy({
 
 
 	// #region insights
-	const insights = await Promise.all(adAccountAds.map(async ({adAccountId, ads}) => Promise.all(ads.data.map(async (ad) => {
+	const insights = await Promise.all(adAccountAds.map(async ({adAccountId, ads}) => Promise.all(ads.map(async (ad) => {
 		const adId = ad.id
 		const totalInsights = await f(`/${adId}/insights`, {fields: ['ad_id', 'spend', 'impressions', 'reach']})
 		
-		const minStart = Math.min(totalInsights.data.map(({date_start}) => new Date(date_start).getTime()))
-		const maxStop = Math.max(totalInsights.data.map(({date_stop}) => new Date(date_stop).getTime()))
+		const minStart = Math.min(totalInsights.map(({date_start}) => new Date(date_start).getTime()))
+		const maxStop = Math.max(totalInsights.map(({date_stop}) => new Date(date_stop).getTime()))
 		const dateFormat = 'yyyy-MM-dd'
 		const dailyInsights = await f(`/${adId}/insights`, {
 			fields: ['ad_id', 'spend', 'impressions', 'reach'], 
