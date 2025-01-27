@@ -66,42 +66,45 @@ class RequestQueue {
 	}
 }
 
-const requestQueue = new RequestQueue()
+module.exports = class FacebookRemote {
 
-const fetchGraphApi = async (fragment, accessToken, params = {}) => {
-	await requestQueue.canMakeRequest()
-		
-	const fetchUrl = new URL(`https://graph.facebook.com/v21.0${fragment}`)
-	fetchUrl.search = new URLSearchParams({
-		access_token: accessToken,
-		...params
-	}).toString()
+	constructor () {
+		this.requestQueue = new RequestQueue(MAX_SCORE, DECAY, BLOCK)
+	}
 
-	requestQueue.add(READ_SCORE)
-	const response = await fetch(fetchUrl)
-	if (!response.ok) {
-		console.error(`Fetch failed with status: ${response.status}`)
-		const json = await response.json()
-		if (json.error?.error?.error_subcode === 2446079) {	// User request limit reached
-			requestQueue.block()
+	async fetchGraphApi (fragment, accessToken, params = {}) {
+		await this.requestQueue.canMakeRequest()
+			
+		const fetchUrl = new URL(`https://graph.facebook.com/v21.0${fragment}`)
+		fetchUrl.search = new URLSearchParams({
+			access_token: accessToken,
+			...params
+		}).toString()
+
+		this.requestQueue.add(READ_SCORE)
+		const response = await fetch(fetchUrl)
+		if (!response.ok) {
+			console.error(`Fetch failed with status: ${response.status}`)
+			const json = await response.json()
+			if (json.error?.error?.error_subcode === 2446079) {	// User request limit reached
+				this.requestQueue.block()
+			}
+			throw new SocialNetworkError(json)
 		}
-		throw new SocialNetworkError(json)
+		const json = await response.json()
+		const {data, paging} = json
+		if (!paging) return json
+		if (paging?.cursors?.after && paging.cursors.after !== EMPTY_CURSOR) {
+			const secondResponse = await this.fetchGraphApi(fragment, accessToken, {
+				...params,
+				after: paging.cursors.after,
+			})
+			return [...data, ...secondResponse.data]
+		}
+		return data
 	}
-	const json = await response.json()
-	const {data, paging} = json
-	if (paging?.cursors?.after && paging.cursors.after !== EMPTY_CURSOR) {
-		const secondResponse = await fetchGraphApi(fragment, accessToken, {
-			...params,
-			after: paging.cursors.after,
-		})
-		return [...data, ...secondResponse]
+
+	createFetchGraphApi (accessToken) {
+		return (fragment, params = {}) => this.fetchGraphApi(fragment, accessToken, params)
 	}
-	return data
-}
-
-const createFetchGraphApi = (accessToken) => (fragment, params) => fetchGraphApi(fragment, accessToken, params)
-
-module.exports = {
-	fetchGraphApi,
-	createFetchGraphApi,
 }

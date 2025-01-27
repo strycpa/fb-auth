@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook Login</title>
+</head>
+<body>
+    <div id="fb-root"></div>
+    <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
+    <script>
+        fetch('/config')
+            .then(response => response.json())
+            .then(config => {
+                window.fbAsyncInit = function() {
+                    FB.init({
+                        appId     : config.appId,
+                        cookie     : true,
+                        xfbml      : true,
+                        version    : 'v10.0'
+                    });
+                    
+                    FB.AppEvents.logPageView();   
+                };
+            });
+
+        function checkLoginState() {
+            FB.getLoginStatus(function(response) {
+                statusChangeCallback(response);
+            });
+        }
+
+        function statusChangeCallback(response) {
+            if (response.status === 'connected') {
+                console.log('Logged in.', response);
+                window.location.href = `/auth/callback?access_token=${response.authResponse.accessToken}`;
+            } else {
+                console.log('Not authenticated.');
+            }
+        }
+    </script>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum. Cras venenatis euismod malesuada.</p>
+    <fb:login-button 
+        scope="public_profile,read_insights,business_management,ads_read,pages_read_engagement"
+        onlogin="checkLoginState();">
+        Connect Facebook Ads Insights
+    </fb:login-button>
+    <p>Curabitur non nulla sit amet nisl tempus convallis quis ac lectus. Curabitur arcu erat
+</body>
+</html>

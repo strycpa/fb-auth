@@ -7,7 +7,8 @@
     "passport": "nodemon passport.js",
     "ads-insights": "nodemon ads-insights.js",
     "facebook-insights-saver": "nodemon bin/facebook-insights-saver.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "frontend": "nodemon server.js"
   },
   "author": "",
   "license": "ISC",
@@ -18,6 +19,7 @@
     "apify": "^3.2.6",
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
+    "ejs": "^3.1.10",
     "express": "^4.21.2",
     "express-session": "^1.18.1",
     "lodash": "^4.17.21",
