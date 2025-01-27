@@ -12,25 +12,25 @@
 		<table class="min-w-full bg-white border border-gray-200">
 			<thead>
 				<tr>
-					<th class="py-2 px-4 border-b">Account Name</th>
-					<th class="py-2 px-4 border-b">Ad ID</th>
-					<th class="py-2 px-4 border-b">Ad Name</th>
-					<th class="py-2 px-4 border-b">Creative</th>
-					<th class="py-2 px-4 border-b">Impressions</th>
-					<th class="py-2 px-4 border-b">Clicks</th>
-					<th class="py-2 px-4 border-b">Spend</th>
+					<% metrics.forEach(metric => { %>
+						<th class="py-2 px-4 border-b"><%= metricNames[metric] || metric %></th>
+					<% }) %>
 				</tr>
 			</thead>
 			<tbody>
 				<% adsData.forEach(ad => { %>
 					<tr>
-						<td class="py-2 px-4 border-b"><%= ad.accountName %></td>
-						<td class="py-2 px-4 border-b"><%= ad.adId %></td>
-						<td class="py-2 px-4 border-b"><%= ad.adName %></td>
-						<td class="py-2 px-4 border-b"><%= JSON.stringify(ad.creative) %></td>
-						<td class="py-2 px-4 border-b"><%= ad.insights.impressions %></td>
-						<td class="py-2 px-4 border-b"><%= ad.insights.clicks %></td>
-						<td class="py-2 px-4 border-b"><%= ad.insights.spend %></td>
+						<% metrics.forEach(metric => { %>
+							<td class="py-2 px-4 border-b">
+								<% if (Array.isArray(ad[metric])) { %>
+									<% ad[metric].forEach(item => { %>
+										<div><%= JSON.stringify(item) %></div>
+									<% }) %>
+								<% } else { %>
+									<%= ad[metric] %>
+								<% } %>
+							</td>
+						<% }) %>
 					</tr>
 				<% }) %>
 			</tbody>

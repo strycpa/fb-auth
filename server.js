@@ -4,12 +4,21 @@ const path = require('path')
 const session = require('express-session')
 const { TokensRepository } = require('./src/repository/facebook-tokens-repository')
 const { Firestore } = require('@google-cloud/firestore')
-const { fetchGraphApi, createFetchGraphApi } = require('./src/remote/facebook-remote')
+const FacebookRemote = require('./src/remote/facebook-remote')
+const FacebookTokensService = require('./src/service/facebook-tokens-service')
+const FacebookAdsInsightsSaverService = require('./src/service/facebook-ads-insights-saver-service')
+const { metricNames } = require('./lib/zod-shemas')
 const app = express()
 const PORT = process.env.PORT || 3000
 
+// @todo strycp come up with some DI, this is getting out of hand
 const firestore = new Firestore()
 const tokensRepository = new TokensRepository(firestore, 'facebook')
+
+const facebookRemote = new FacebookRemote()
+const facebookTokensService = new FacebookTokensService(facebookRemote, tokensRepository)
+
+const facebookAdsInsightsSaverService = new FacebookAdsInsightsSaverService(facebookRemote, facebookTokensService)
 
 app.use(session({
 	secret: process.env.SESSION_SECRET,
@@ -37,27 +46,9 @@ app.get('/auth/callback', async (req, res) => {
 	}
 
 	try {
-		// Exchange short-lived token for long-lived token
-		const longLivedTokenResponse = await fetchGraphApi('/oauth/access_token', access_token, {
-			grant_type: 'fb_exchange_token',
-			client_id: process.env.APP_ID,
-			client_secret: process.env.APP_SECRET,
-			fb_exchange_token: access_token,
-		})
-		const longLivedToken = longLivedTokenResponse.access_token
+		const longLivedToken = await facebookTokensService.exchangeLongLivedToken(access_token)
 
-		const f = createFetchGraphApi(longLivedToken)
-		const [ me, permissions ] = await Promise.all([
-			f('/me'),
-			f('/me/permissions'),
-		])
-
-		// Store long-lived token to Firestore using TokensRepository
-		await tokensRepository.saveToken(me.id, process.env.APP_ID, {
-			access_token: longLivedToken, 
-			permissions: permissions.data.map((o) => o.permission),
-			comment: me.name
-		})
+		const me = await facebookTokensService.storeToken(process.env.APP_ID, longLivedToken)
 
 		// Store user metadata in session
 		req.session.user = me
@@ -76,35 +67,17 @@ app.get('/ads-insights', async (req, res) => {
 		return res.redirect('/')
 	}
 
-	const longLivedToken = await tokensRepository.fetchToken(req.session.user.id, process.env.APP_ID)
-	const f = createFetchGraphApi(longLivedToken.access_token)
-
 	try {
-		// Fetch user's ad accounts
-		const [ adAccounts, businessAccounts ] = await Promise.all([
-			f('/me/adaccounts', { fields: ['id', 'name'] }),
-			f('/me/businesses'),
-		])
-		const businessAdAccounts = await Promise.all(businessAccounts.map(async (business) => {
-			return f(`/${business.id}/owned_ad_accounts`, { fields: ['id', 'name'] })
-		}))
+		const token = await tokensRepository.fetchToken(req.session.user.id, process.env.APP_ID)
 
-		const allAdAccounts = [...adAccounts, ...businessAdAccounts.flat()]
+		const allAdAccounts = await facebookAdsInsightsSaverService.fetchAllAdaccounts(token.access_token)
 
-		// Fetch ads and their metrics
-		const adsData = await Promise.all(allAdAccounts.map(async (account) => {
-			const ads = await f(`/${account.id}/ads`, { fields: ['id', 'name', 'adcreatives', 'insights'] })
-			return ads.map(ad => ({
-				accountName: account.name,
-				adId: ad.id,
-				adName: ad.name,
-				creative: ad.adcreatives.data[0],
-				insights: ad.insights.data[0]
-			}))
-		}))
+		const allAdsWithMetrics = await facebookAdsInsightsSaverService.fetchAllAdsWithMetrics(allAdAccounts, token.access_token)
+		console.log('allAdsWithMetrics'); console.dir(allAdsWithMetrics, {depth: null})
+		
+		const metrics = Object.keys(allAdsWithMetrics[0] || {})
 
-		// Render ads data using the template
-		res.render('ads-insights', { adsData: adsData.flat() })
+		res.render('ads-insights', { adsData: allAdsWithMetrics, metrics, metricNames })
 	} catch (error) {
 		console.error('Error fetching ads insights:', error)
 		res.status(500).send('Internal Server Error')
