@@ -95,7 +95,7 @@ const fetchGraphApi = async (fragment, accessToken, params = {}) => {
 			...params,
 			after: paging.cursors.after,
 		})
-		return [...data, ...secondResponse]
+		return [...data, ...secondResponse.data]
 	}
 	return data
 }
