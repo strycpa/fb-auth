@@ -1,6 +1,6 @@
 const collectionPath = (network, appId) => `tokens/${network}/apps/${appId}/users`
 
-export class TokensStore {
+export class TokensRepository {
 
 	constructor (firestore, network) {
 		this.firestore = firestore

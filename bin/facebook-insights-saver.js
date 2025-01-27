@@ -3,7 +3,7 @@ require('dotenv').config()
 const {Firestore} = require('@google-cloud/firestore')
 
 const config = require('../config')
-const {TokensStore} = require('../lib/tokens-store')
+const {TokensRepository} = require('../src/repository/facebook-tokens-repository')
 const {createFetchGraphApi} = require('../src/remote/facebook-remote')
 const {paralellize} = require('../lib/utils')
 const zodSchemas = require('../lib/zod-shemas')
@@ -28,10 +28,10 @@ const APP_ID = process.env.APP_ID
 const USER_ID = '10235767919166237'
 
 const firestore = new Firestore()
-const tokensStore = new TokensStore(firestore, 'facebook')
+const tokensRepository = new TokensRepository(firestore, 'facebook')
 
 ;(async () => {
-	const token = await tokensStore.fetchToken(USER_ID, APP_ID)
+	const token = await tokensRepository.fetchToken(USER_ID, APP_ID)
 	const fetchGraphApi = createFetchGraphApi(token.access_token)
 
 	const fetchAdAccounts = async (source) => {

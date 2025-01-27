@@ -5,7 +5,7 @@ const passport = require('passport')
 const FacebookStrategy = require('passport-facebook')
 const {Firestore} = require('@google-cloud/firestore')
 const dateFns = require('date-fns')
-const {TokensStore} = require('./lib/tokens-store')
+const {TokensRepository} = require('./src/repository/facebook-tokens-repository')
 const {fetchGraphApi, createFetchGraphApi} = require('./src/remote/facebook-remote')
 const app = express()
 const port = process.env.PORT || 8000
@@ -48,8 +48,8 @@ passport.use(new FacebookStrategy({
 
 	const userId = me.id
 	
-	const tokensStore = new TokensStore(firestore, 'facebook')
-	await tokensStore.saveToken(userId, APP_ID, longLivedToken, PERMISSIONS.split(','))
+	const tokensRepository = new TokensRepository(firestore, 'facebook')
+	await tokensRepository.saveToken(userId, APP_ID, longLivedToken, PERMISSIONS.split(','))
 
 	const businesses = await f('/me/businesses')
 	console.log('businesses', JSON.stringify(businesses))

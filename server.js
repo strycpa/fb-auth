@@ -2,14 +2,14 @@ require('dotenv').config()
 const express = require('express')
 const path = require('path')
 const session = require('express-session')
-const { TokensStore } = require('./lib/tokens-store')
+const { TokensRepository } = require('./src/repository/facebook-tokens-repository')
 const { Firestore } = require('@google-cloud/firestore')
 const { fetchGraphApi, createFetchGraphApi } = require('./src/remote/facebook-remote')
 const app = express()
 const PORT = process.env.PORT || 3000
 
 const firestore = new Firestore()
-const tokensStore = new TokensStore(firestore, 'facebook')
+const tokensRepository = new TokensRepository(firestore, 'facebook')
 
 app.use(session({
 	secret: process.env.SESSION_SECRET,
@@ -52,8 +52,8 @@ app.get('/auth/callback', async (req, res) => {
 			f('/me/permissions'),
 		])
 
-		// Store long-lived token to Firestore using TokensStore
-		await tokensStore.saveToken(me.id, process.env.APP_ID, {
+		// Store long-lived token to Firestore using TokensRepository
+		await tokensRepository.saveToken(me.id, process.env.APP_ID, {
 			access_token: longLivedToken, 
 			permissions: permissions.data.map((o) => o.permission),
 			comment: me.name
@@ -76,7 +76,7 @@ app.get('/ads-insights', async (req, res) => {
 		return res.redirect('/')
 	}
 
-	const longLivedToken = await tokensStore.fetchToken(req.session.user.id, process.env.APP_ID)
+	const longLivedToken = await tokensRepository.fetchToken(req.session.user.id, process.env.APP_ID)
 	const f = createFetchGraphApi(longLivedToken.access_token)
 
 	try {
