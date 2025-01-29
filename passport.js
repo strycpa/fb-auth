@@ -1,12 +1,13 @@
-require('dotenv').config()
-const express = require('express')
-const session = require('express-session')
-const passport = require('passport')
-const FacebookStrategy = require('passport-facebook')
-const {Firestore} = require('@google-cloud/firestore')
-const dateFns = require('date-fns')
-const {TokensRepository} = require('./src/repository/facebook-tokens-repository')
-const FacebookRemote = require('./src/remote/facebook-remote')
+import 'dotenv/config'
+import express from 'express'
+import session from 'express-session'
+import passport from 'passport'
+import { Strategy as FacebookStrategy } from 'passport-facebook'
+import { Firestore } from '@google-cloud/firestore'
+import { format } from 'date-fns'
+import { TokensRepository } from './src/repository/facebook-tokens-repository.js'
+import FacebookRemote from './src/remote/facebook-remote.js'
+
 const app = express()
 const port = process.env.PORT || 8000
 
@@ -100,7 +101,7 @@ passport.use(new FacebookStrategy({
 		const dateFormat = 'yyyy-MM-dd'
 		const dailyInsights = await f(`/${adId}/insights`, {
 			fields: ['ad_id', 'spend', 'impressions', 'reach'], 
-			time_range: JSON.stringify({since: dateFns.format(minStart, dateFormat), until: dateFns.format(maxStop, dateFormat)}), 
+			time_range: JSON.stringify({since: format(minStart, dateFormat), until: format(maxStop, dateFormat)}), 
 			time_increment: 1,	// yay, this param is responsible for the daily breakdown
 		})
 			
@@ -120,8 +121,8 @@ app.use(session({
 	saveUninitialized: true,
 	cookie: { secure: false }
 }))
-app.use(passport.session());
-app.use(passport.initialize());
+app.use(passport.session())
+app.use(passport.initialize())
 
 app.get('/', (req, res) => {
 	if (req.user) {
@@ -138,4 +139,6 @@ app.get(
 );
 
 
-app.listen(port, () => console.log(`listening on port ${port}`)) 
+app.listen(port, () => console.log(`listening on port ${port}`))
+
+export default app

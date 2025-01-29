@@ -1,13 +1,14 @@
-require('dotenv').config()
-const express = require('express')
-const path = require('path')
-const session = require('express-session')
-const { TokensRepository } = require('./src/repository/facebook-tokens-repository')
-const { Firestore } = require('@google-cloud/firestore')
-const FacebookRemote = require('./src/remote/facebook-remote')
-const FacebookTokensService = require('./src/service/facebook-tokens-service')
-const FacebookAdsInsightsSaverService = require('./src/service/facebook-ads-insights-saver-service')
-const { metricNames } = require('./lib/zod-shemas')
+import 'dotenv/config'
+import express from 'express'
+import path from 'path'
+import session from 'express-session'
+import { TokensRepository } from './src/repository/facebook-tokens-repository.js'
+import { Firestore } from '@google-cloud/firestore'
+import FacebookRemote from './src/remote/facebook-remote.js'
+import FacebookTokensService from './src/service/facebook-tokens-service.js'
+import FacebookAdsInsightsSaverService from './src/service/facebook-ads-insights-saver-service.js'
+import { metricNames } from './lib/zod-shemas.js'
+
 const app = express()
 const PORT = process.env.PORT || 3000
 

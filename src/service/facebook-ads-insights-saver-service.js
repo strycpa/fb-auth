@@ -1,14 +1,12 @@
-const {paralellize, chunkArray} = require('../../lib/utils')
-const zodSchemas = require('../../lib/zod-shemas')
+import { paralellize, chunkArray } from '../../lib/utils.js'
+import zodSchemas from '../../lib/zod-shemas.js'
 
-module.exports = class FacebookAdsInsightsSaverService {
+export default class FacebookAdsInsightsSaverService {
 
 	constructor(facebookRemote, tokenService) {
 		this.facebookRemote = facebookRemote
 		this.tokenService = tokenService
 	}
-
-
 
 	async _fetchAdAccountsBySource(accessToken, source) {
 		switch (source) {
@@ -46,8 +44,7 @@ module.exports = class FacebookAdsInsightsSaverService {
 		return allAdsWithMetrics.flat()
 	}
 
-
 	async saveInsights(accessToken, adAccountId, insights) {
-		
+		// Implementation here
 	}
 }
