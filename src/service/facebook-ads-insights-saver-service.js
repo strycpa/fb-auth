@@ -1,5 +1,5 @@
 import { paralellize, chunkArray } from '../../lib/utils.js'
-import zodSchemas from '../../lib/zod-shemas.js'
+import zodSchemas from '../../lib/zod-schemas.js'
 
 export default class FacebookAdsInsightsSaverService {
 

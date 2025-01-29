@@ -7,7 +7,7 @@ import { Firestore } from '@google-cloud/firestore'
 import FacebookRemote from './src/remote/facebook-remote.js'
 import FacebookTokensService from './src/service/facebook-tokens-service.js'
 import FacebookAdsInsightsSaverService from './src/service/facebook-ads-insights-saver-service.js'
-import { metricNames } from './lib/zod-shemas.js'
+import { metricNames } from './lib/zod-schemas.js'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -27,12 +27,12 @@ app.use(session({
 	saveUninitialized: true
 }))
 
-app.use(express.static(path.join(__dirname, 'public')))
-app.set('views', path.join(__dirname, 'views'))
+app.use(express.static('public'))
+app.set('views', './views')
 app.set('view engine', 'ejs')
 
 app.get('/', (req, res) => {
-	res.sendFile(path.join(__dirname, 'public', 'index.html'))
+	res.sendFile('index.html', { root: './public' })
 })
 
 app.get('/config', (req, res) => {
@@ -78,7 +78,11 @@ app.get('/ads-insights', async (req, res) => {
 		
 		const metrics = Object.keys(allAdsWithMetrics[0] || {})
 
-		res.render('ads-insights', { adsData: allAdsWithMetrics, metrics, metricNames })
+		res.render('ads-insights', { 
+			adsData: allAdsWithMetrics, 
+			metrics, 
+			metricNames,
+		})
 	} catch (error) {
 		console.error('Error fetching ads insights:', error)
 		res.status(500).send('Internal Server Error')
