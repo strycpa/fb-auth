@@ -1,4 +1,4 @@
-const {SocialNetworkError} = require('../../lib/error')
+import { SocialNetworkError } from '../../lib/error.js'
 
 const EMPTY_CURSOR = 'MAZDZD'	// facebook's magic cursor value which signals the next page is empty
 
@@ -39,7 +39,7 @@ class RequestQueue {
 	}
 
 	unblock () {
-	console.log('unblocked')
+		console.log('unblocked')
 		this.blocked = null
 	}
 
@@ -66,7 +66,7 @@ class RequestQueue {
 	}
 }
 
-module.exports = class FacebookRemote {
+export default class FacebookRemote {
 
 	constructor () {
 		this.requestQueue = new RequestQueue(MAX_SCORE, DECAY, BLOCK)

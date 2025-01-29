@@ -1,22 +1,19 @@
-require('dotenv').config()
-const express = require('express')
-const session = require('express-session')
-const passport = require('passport')
-const FacebookStrategy = require('passport-facebook')
-const {Firestore} = require('@google-cloud/firestore')
+import 'dotenv/config'
+import express from 'express'
+import session from 'express-session'
+import passport from 'passport'
+import { Strategy as FacebookStrategy } from 'passport-facebook'
+import { Firestore } from '@google-cloud/firestore'
+import { APP_ID, APP_SECRET, REDIRECT_URL, PERMISSIONS } from './config.js'
+
 const app = express()
 const port = process.env.PORT || 8000
 
-const APP_ID = process.env.APP_ID
-const APP_SECRET = process.env.APP_SECRET
 if (!APP_ID || !APP_SECRET) throw new Error('Missing necessary app info in .env')
-const REDIRECT_URL = process.env.REDIRECT_URL || 'http://localhost:8000/auth/callback'
-const PERMISSIONS = process.env.PERMISSIONS || 'public_profile,read_insights,business_management,ads_read,pages_read_engagement'
 const USER_ID = '10235767919166237'
 
 const firestore = new Firestore()
 const tokensFacebookCollection = firestore.collection('tokens_facebook')
-
 
 const fetchGraphApi = async (fragment, accessToken, params = {}) => {
 	const fetchUrl = new URL(`https://graph.facebook.com/v21.0${fragment}`)
@@ -32,7 +29,7 @@ const fetchGraphApi = async (fragment, accessToken, params = {}) => {
 }
 const createFetchGraphApi = (accessToken) => (fragment, params) => fetchGraphApi(fragment, accessToken, params)
 
-;(async () => {
+const main = async () => {
 	const snapshot = await tokensFacebookCollection.where('user_id', '==', USER_ID).limit(1).get()
 	const {access_token: accessToken} = snapshot.docs[0].data()
 	const f = createFetchGraphApi(accessToken)
@@ -57,4 +54,6 @@ const createFetchGraphApi = (accessToken) => (fragment, params) => fetchGraphApi
 		return {adAccountId, adId, creativeId, creativeDetail}
 	}))))
 	console.log('creatives'); console.dir(creatives, {depth: null})
-})()
+}
+
+main().catch(console.error)

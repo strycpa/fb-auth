@@ -1,13 +1,13 @@
-require('dotenv').config()
+import 'dotenv/config'
+import { Firestore } from '@google-cloud/firestore'
+import { writeFile } from 'fs/promises'
 
-const {Firestore} = require('@google-cloud/firestore')
-
-const config = require('../config')
-const {TokensRepository} = require('../src/repository/facebook-tokens-repository')
-const {createFetchGraphApi} = require('../src/remote/facebook-remote')
-const {paralellize} = require('../lib/utils')
-const zodSchemas = require('../lib/zod-shemas')
-const bigQuery = require('../lib/bigquery')
+import config from '../config.js'
+import { TokensRepository } from '../src/repository/facebook-tokens-repository.js'
+import { createFetchGraphApi } from '../src/remote/facebook-remote.js'
+import { paralellize } from '../lib/utils.js'
+import zodSchemas from '../lib/zod-shemas.js'
+import bigQuery from '../lib/bigquery.js'
 
 const AD_ACCOUNT_SOURCES = {
 	'personal': 'personal',
@@ -30,7 +30,7 @@ const USER_ID = '10235767919166237'
 const firestore = new Firestore()
 const tokensRepository = new TokensRepository(firestore, 'facebook')
 
-;(async () => {
+try {
 	const token = await tokensRepository.fetchToken(USER_ID, APP_ID)
 	const fetchGraphApi = createFetchGraphApi(token.access_token)
 
@@ -80,7 +80,7 @@ const tokensRepository = new TokensRepository(firestore, 'facebook')
 	)))).flat().flat().flat().flat()
 	console.log('brokenDownInsights'); console.dir(brokenDownInsights, {depth: null})
 	
-	require('fs').writeFileSync('brokenDownInsights', JSON.stringify(brokenDownInsights, null, 2))
+	await writeFile('brokenDownInsights', JSON.stringify(brokenDownInsights, null, 2))
 
 	const tables = {}
 	await Promise.all(brokenDownInsights.map(async (data) => {
@@ -96,4 +96,7 @@ const tokensRepository = new TokensRepository(firestore, 'facebook')
 		const table = tables[tableName]
 		await table.insert(data)
 	}))
-})()
+} catch (error) {
+	console.error('Error:', error)
+	process.exit(1)
+}

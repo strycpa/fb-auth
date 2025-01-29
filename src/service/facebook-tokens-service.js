@@ -1,8 +1,14 @@
-module.exports = class FacebookTokensService {
+import FacebookRemote from '../remote/facebook-remote.js'
+import { TokensRepository } from '../repository/facebook-tokens-repository.js'
+
+/**
+ * Service for handling Facebook tokens.
+ */
+export default class FacebookTokensService {
 	/**
 	 * Creates an instance of FacebookTokensService.
-	 * @param {import("../remote/facebook-remote")} facebookRemote - The Facebook remote service.
-	 * @param {import("../repository/facebook-tokens-repository")} facebookTokensRepository - The Facebook tokens repository.
+	 * @param {FacebookRemote} facebookRemote - The Facebook remote service.
+	 * @param {TokensRepository} facebookTokensRepository - The Facebook tokens repository.
 	 */
 	constructor(facebookRemote, facebookTokensRepository) {
 		this.facebookRemote = facebookRemote
