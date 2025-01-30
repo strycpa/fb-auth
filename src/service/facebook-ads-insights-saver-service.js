@@ -8,21 +8,40 @@ export default class FacebookAdsInsightsSaverService {
 		this.tokenService = tokenService
 	}
 
+	static AD_ACCOUNT_SOURCE = {
+		PERSONAL: 'personal',
+		BUSINESS: 'business'
+	}
+
 	async _fetchAdAccountsBySource(accessToken, source) {
+		const fields = ['id', 'name']
 		switch (source) {
-			case 'personal':
-				return this.facebookRemote.fetchGraphApi('/me/adaccounts', accessToken)
-			case 'business':
-				const businesses = await this.facebookRemote.fetchGraphApi('/me/businesses', accessToken)
-				return (await paralellize(businesses, ({id}) => this.facebookRemote.fetchGraphApi(`/${id}/owned_ad_accounts`, accessToken))).flat()
+			case FacebookAdsInsightsSaverService.AD_ACCOUNT_SOURCE.PERSONAL:
+				return this.facebookRemote.fetchGraphApi('/me/adaccounts', accessToken, {fields})
+			case FacebookAdsInsightsSaverService.AD_ACCOUNT_SOURCE.BUSINESS:
+				const businesses = await this.facebookRemote.fetchGraphApi('/me/businesses', accessToken, {fields})
+				return (await paralellize(businesses, async (business) => {
+					const adAccounts = await this.facebookRemote.fetchGraphApi(`/${business.id}/owned_ad_accounts`, accessToken, {fields})
+					return adAccounts.map((adAccount) => ({...adAccount, business}))
+				})).flat()
 			default:
 				throw new Error(`Unknown ad accounts source ${source}`)
 		}
 	}
 
+	async fetchPersonalAdaccounts (accessToken) {
+		return this._fetchAdAccountsBySource(accessToken, FacebookAdsInsightsSaverService.AD_ACCOUNT_SOURCE.PERSONAL)
+	}
+
+	async fetchBusinessAdaccounts (accessToken) {
+		return this._fetchAdAccountsBySource(accessToken, FacebookAdsInsightsSaverService.AD_ACCOUNT_SOURCE.BUSINESS)
+	}
+
 	async fetchAllAdaccounts (accessToken) {
-		const personalAdAccounts = await this._fetchAdAccountsBySource(accessToken, 'personal')
-		const businessAdAccounts = await this._fetchAdAccountsBySource(accessToken, 'business')
+		const [personalAdAccounts, businessAdAccounts] = await Promise.all([
+			this.fetchPersonalAdaccounts(accessToken),
+			this.fetchBusinessAdaccounts(accessToken)
+		])
 		return [...personalAdAccounts, ...businessAdAccounts]
 	}
 

@@ -54,26 +54,53 @@ app.get('/auth/callback', async (req, res) => {
 		// Store user metadata in session
 		req.session.user = me
 
-		 // Redirect to /ads-insights
-		res.redirect('/ads-insights')
+		 // Redirect to /ad-accounts
+		res.redirect('/ad-accounts')
 	} catch (error) {
 		console.error('Error during authentication callback:', error)
 		res.status(500).send('Internal Server Error')
 	}
 })
 
-// New route to display ads insights
-app.get('/ads-insights', async (req, res) => {
+app.get('/ad-accounts', async (req, res) => {
 	if (!req.session.user) {
 		return res.redirect('/')
 	}
 
 	try {
 		const token = await tokensRepository.fetchToken(req.session.user.id, process.env.APP_ID)
+		
+		const [personalAccounts, businessAccounts] = await Promise.all([
+			facebookAdsInsightsSaverService.fetchPersonalAdaccounts(token.access_token),
+			facebookAdsInsightsSaverService.fetchBusinessAdaccounts(token.access_token)
+		])
 
-		const allAdAccounts = await facebookAdsInsightsSaverService.fetchAllAdaccounts(token.access_token)
+		res.render('ad-accounts', { 
+			personalAccounts,
+			businessAccounts
+		})
+	} catch (error) {
+		console.error('Error fetching ad accounts:', error)
+		res.status(500).send('Internal Server Error')
+	}
+})
 
-		const allAdsWithMetrics = await facebookAdsInsightsSaverService.fetchAllAdsWithMetrics(allAdAccounts, token.access_token)
+app.get('/ads-insights', async (req, res) => {
+	if (!req.session.user) {
+		return res.redirect('/')
+	}
+
+	const selectedAccounts = req.query.accounts
+	if (!selectedAccounts) {
+		return res.redirect('/ad-accounts')
+	}
+
+	try {
+		const token = await tokensRepository.fetchToken(req.session.user.id, process.env.APP_ID)
+		const accountIds = Array.isArray(selectedAccounts) ? selectedAccounts : [selectedAccounts]
+		const selectedAdAccounts = accountIds.map(id => ({ id }))
+		
+		const allAdsWithMetrics = await facebookAdsInsightsSaverService.fetchAllAdsWithMetrics(selectedAdAccounts, token.access_token)
 		console.log('allAdsWithMetrics'); console.dir(allAdsWithMetrics, {depth: null})
 		
 		const metrics = Object.keys(allAdsWithMetrics[0] || {})
