@@ -1,14 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Facebook Login</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Facebook Ads Insights Tool</title>
+	<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body>
-    <div id="fb-root"></div>
-    <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
-    <script>
+<body class="bg-gray-100">
+	<div id="fb-root"></div>
+	<script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
+
+	<div class="min-h-screen flex items-center justify-center">
+		<div class="max-w-2xl mx-auto p-8 bg-white rounded-lg shadow-sm">
+			<h1 class="text-3xl font-bold text-gray-900 mb-4">Facebook Ads Insights Tool</h1>
+			
+			<div class="space-y-4 text-gray-600 mb-8">
+				<p class="leading-relaxed">
+					Connect your Facebook account to access detailed insights about your ad insights. 
+					This tool allows you to:
+				</p>
+				<ul class="list-disc list-inside space-y-2 ml-4">
+					<li>View both personal and business ad accounts</li>
+					<li>Access detailed metrics for your ads</li>
+					<li>Analyze performance across multiple accounts</li>
+				</ul>
+			</div>
+
+			<div class="border-t border-gray-200 pt-6">
+				<div class="flex items-center justify-between">
+					<p class="text-sm text-gray-500">
+						Secure login with Facebook required
+					</p>
+					<fb:login-button 
+						class="transform hover:scale-105 transition-transform"
+						scope="public_profile,read_insights,business_management,ads_read,pages_read_engagement"
+						onlogin="checkLoginState();">
+						Connect Facebook Ads Insights
+					</fb:login-button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
         fetch('/config')
             .then(response => response.json())
             .then(config => {
@@ -39,12 +73,5 @@
             }
         }
     </script>
-    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum. Cras venenatis euismod malesuada.</p>
-    <fb:login-button 
-        scope="public_profile,read_insights,business_management,ads_read,pages_read_engagement"
-        onlogin="checkLoginState();">
-        Connect Facebook Ads Insights
-    </fb:login-button>
-    <p>Curabitur non nulla sit amet nisl tempus convallis quis ac lectus. Curabitur arcu erat
 </body>
 </html>
