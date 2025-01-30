@@ -14,6 +14,9 @@ import { metricNames } from './lib/zod-schemas.js'
 const app = express()
 const PORT = process.env.PORT || 3000
 
+// Add JSON body parser middleware
+app.use(express.json())
+
 // @todo strycp come up with some DI, this is getting out of hand
 const firestore = new Firestore()
 const tokensRepository = new TokensRepository(firestore, 'facebook')
@@ -128,9 +131,9 @@ app.get('/ads-insights', async (req, res) => {
 
 app.post('/api/create-task', async (req, res) => {
 	try {
-		const { google: { projectId, location, queue: {name: queueName} }, BASE_URL } = config
+		const { google: { projectId, cloudTasks: { location, name } }, BASE_URL } = config
 
-		const parent = client.queuePath(projectId, location, queueName)
+		const parent = client.queuePath(projectId, location, name)
 		
 		const task = {
 			httpRequest: {
