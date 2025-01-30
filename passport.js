@@ -7,6 +7,7 @@ import { Firestore } from '@google-cloud/firestore'
 import { format } from 'date-fns'
 import { TokensRepository } from './src/repository/facebook-tokens-repository.js'
 import FacebookRemote from './src/remote/facebook-remote.js'
+import FacebookTokensService from './src/service/facebook-tokens-service.js'
 
 const app = express()
 const port = process.env.PORT || 8000
@@ -21,6 +22,8 @@ console.log(`https://www.facebook.com/v21.0/dialog/oauth?client_id=${APP_ID}&red
 
 const firestore = new Firestore()
 const facebookRemote = new FacebookRemote()
+const tokensRepository = new TokensRepository(firestore, 'facebook')
+const tokensService = new FacebookTokensService(facebookRemote, tokensRepository)
 
 passport.initialize({ userProperty: 'profile' })
 passport.serializeUser((user, done) => done(null, user));
@@ -50,8 +53,7 @@ passport.use(new FacebookStrategy({
 
 	const userId = me.id
 	
-	const tokensRepository = new TokensRepository(firestore, 'facebook')
-	await tokensRepository.saveToken(userId, APP_ID, {access_token: longLivedToken}, PERMISSIONS.split(','))
+	await tokensService.storeToken(APP_ID, longLivedToken)
 
 	const businesses = await f('/me/businesses')
 	console.log('businesses', JSON.stringify(businesses))
