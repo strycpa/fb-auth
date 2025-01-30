@@ -1,16 +1,19 @@
-export const APP_ID = process.env.APP_ID
-export const APP_SECRET = process.env.APP_SECRET
-export const REDIRECT_URL = process.env.REDIRECT_URL
-export const PERMISSIONS = ['ads_read', 'ads_management']
-
-export const projectId = process.env.GOOGLE_CLOUD_PROJECT
-export const datasetId = 'facebook_ads_insights'
-
-export default {
-    projectId,
-    datasetId,
-    APP_ID,
-    APP_SECRET,
-    REDIRECT_URL,
-    PERMISSIONS
+export const config = {
+    facebook: {
+        APP_ID: process.env.APP_ID,
+        APP_SECRET: process.env.APP_SECRET,
+        REDIRECT_URL: process.env.REDIRECT_URL,
+        PERMISSIONS: ['ads_read', 'ads_management']
+    },
+    google: {
+		projectId: 'ravineo-tests',
+        bigQuery: {
+            location: 'EU',	
+            datasetId: 'facebook_ads_insights',
+        },
+        queue: {
+            name: 'facebook-ads-insights-full-download',
+            location: 'europe-west1'
+        }
+    }
 }

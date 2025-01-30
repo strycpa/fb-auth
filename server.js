@@ -36,7 +36,7 @@ app.get('/', (req, res) => {
 })
 
 app.get('/config', (req, res) => {
-	res.json({ appId: process.env.APP_ID })
+	res.json({ appId: config.facebook.APP_ID })
 })
 
 app.get('/auth/callback', async (req, res) => {
@@ -49,7 +49,7 @@ app.get('/auth/callback', async (req, res) => {
 	try {
 		const longLivedToken = await facebookTokensService.exchangeLongLivedToken(access_token)
 
-		const me = await facebookTokensService.storeToken(process.env.APP_ID, longLivedToken)
+		const me = await facebookTokensService.storeToken(config.facebook.APP_ID, longLivedToken)
 
 		// Store user metadata in session
 		req.session.user = me
@@ -68,7 +68,7 @@ app.get('/ad-accounts', async (req, res) => {
 	}
 
 	try {
-		const token = await tokensRepository.fetchToken(req.session.user.id, process.env.APP_ID)
+		const token = await tokensRepository.fetchToken(req.session.user.id, config.facebook.APP_ID)
 		
 		const [personalAccounts, businessAccounts] = await Promise.all([
 			facebookAdsInsightsSaverService.fetchPersonalAdaccounts(token.access_token),
@@ -96,7 +96,7 @@ app.get('/ads-insights', async (req, res) => {
 	}
 
 	try {
-		const token = await tokensRepository.fetchToken(req.session.user.id, process.env.APP_ID)
+		const token = await tokensRepository.fetchToken(req.session.user.id, config.facebook.APP_ID)
 		const accountIds = Array.isArray(selectedAccounts) ? selectedAccounts : [selectedAccounts]
 		const selectedAdAccounts = accountIds.map(id => ({ id }))
 		
