@@ -55,7 +55,7 @@
 	</div>
 
 	<script>
-		document.getElementById('accountsForm').addEventListener('submit', (e) => {
+		document.getElementById('accountsForm').addEventListener('submit', async (e) => {
 			e.preventDefault();
 			const checkboxes = document.querySelectorAll('input[name="accounts"]:checked');
 			const selectedAccounts = Array.from(checkboxes).map(cb => cb.value);
@@ -65,9 +65,32 @@
 				return;
 			}
 
-			const queryString = selectedAccounts.map(id => `accounts=${id}`).join('&');
-			window.location.href = `/ads-insights?${queryString}`;
+			try {
+				// Create background task first
+				const response = await fetch('/api/create-task', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({ 
+						accountIds: selectedAccounts,
+						delaySeconds: 0
+					})
+				});
+
+				if (!response.ok) {
+					throw new Error('Failed to create task');
+				}
+
+				// If task created successfully, proceed to insights page
+				const queryString = selectedAccounts.map(id => `accounts=${id}`).join('&');
+				window.location.href = `/ads-insights?${queryString}`;
+			} catch (error) {
+				console.error('Error creating task:', error);
+				alert('Failed to start data processing. Please try again.');
+			}
 		});
 	</script>
+
 </body>
 </html>

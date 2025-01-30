@@ -4,9 +4,11 @@ import path from 'path'
 import session from 'express-session'
 import { TokensRepository } from './src/repository/facebook-tokens-repository.js'
 import { Firestore } from '@google-cloud/firestore'
+import { CloudTasksClient } from '@google-cloud/tasks'
 import FacebookRemote from './src/remote/facebook-remote.js'
 import FacebookTokensService from './src/service/facebook-tokens-service.js'
 import FacebookAdsInsightsSaverService from './src/service/facebook-ads-insights-saver-service.js'
+import { config } from './config.js'
 import { metricNames } from './lib/zod-schemas.js'
 
 const app = express()
@@ -21,6 +23,8 @@ const facebookTokensService = new FacebookTokensService(facebookRemote, tokensRe
 
 const facebookAdsInsightsSaverService = new FacebookAdsInsightsSaverService(facebookRemote, facebookTokensService)
 
+const client = new CloudTasksClient()
+
 app.use(session({
 	secret: process.env.SESSION_SECRET,
 	resave: false,
@@ -30,6 +34,8 @@ app.use(session({
 app.use(express.static('public'))
 app.set('views', './views')
 app.set('view engine', 'ejs')
+
+// #region frontend
 
 app.get('/', (req, res) => {
 	res.sendFile('index.html', { root: './public' })
@@ -115,6 +121,51 @@ app.get('/ads-insights', async (req, res) => {
 		res.status(500).send('Internal Server Error')
 	}
 })
+
+// #endregion frontend
+
+// #region api
+
+app.post('/api/create-task', async (req, res) => {
+	try {
+		const { google: { projectId, location, queue: {name: queueName} }, BASE_URL } = config
+
+		const parent = client.queuePath(projectId, location, queueName)
+		
+		const task = {
+			httpRequest: {
+				httpMethod: 'POST',
+				url: `${BASE_URL}/process-task`,
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: Buffer.from(JSON.stringify(req.body)).toString('base64'),
+			},
+			scheduleTime: {
+				seconds: Date.now() / 1000 + (req.body.delaySeconds || 0),
+			},
+		}
+
+		const request = {
+			parent,
+			task,
+		}
+
+		const [response] = await client.createTask(request)
+		res.json({
+			success: true,
+			taskName: response.name,
+		})
+	} catch (error) {
+		console.error('Error creating task:', error)
+		res.status(500).json({
+			success: false,
+			error: 'Failed to create task'
+		})
+	}
+})
+
+// #endregion api
 
 app.listen(PORT, () => {
 	console.log(`Server is running on http://localhost:${PORT}`)
