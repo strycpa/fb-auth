@@ -51,7 +51,7 @@ passport.use(new FacebookStrategy({
 	const userId = me.id
 	
 	const tokensRepository = new TokensRepository(firestore, 'facebook')
-	await tokensRepository.saveToken(userId, APP_ID, longLivedToken, PERMISSIONS.split(','))
+	await tokensRepository.saveToken(userId, APP_ID, {access_token: longLivedToken}, PERMISSIONS.split(','))
 
 	const businesses = await f('/me/businesses')
 	console.log('businesses', JSON.stringify(businesses))
