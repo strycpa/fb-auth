@@ -34,18 +34,16 @@ app.use(session({
 	saveUninitialized: true
 }))
 
-app.use(express.static('public'))
 app.set('views', './views')
 app.set('view engine', 'ejs')
 
 // #region frontend
 
 app.get('/', (req, res) => {
-	res.sendFile('index.html', { root: './public' })
-})
-
-app.get('/config', (req, res) => {
-	res.json({ appId: config.facebook.APP_ID })
+	res.render('index', { 
+		appId: config.facebook.APP_ID,
+		scope: 'public_profile,read_insights,business_management,ads_read,pages_read_engagement'
+	});
 })
 
 app.get('/auth/callback', async (req, res) => {
