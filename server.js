@@ -10,6 +10,7 @@ import FacebookTokensService from './src/service/facebook-tokens-service.js'
 import FacebookAdsInsightsSaverService from './src/service/facebook-ads-insights-saver-service.js'
 import { config } from './config.js'
 import { metricNames } from './lib/zod-schemas.js'
+import TasksService from './src/service/tasks-service.js'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -27,6 +28,8 @@ const facebookTokensService = new FacebookTokensService(facebookRemote, tokensRe
 const facebookAdsInsightsSaverService = new FacebookAdsInsightsSaverService(facebookRemote, facebookTokensService)
 
 const client = new CloudTasksClient()
+
+const tasksService = new TasksService(client, tokensRepository, facebookAdsInsightsSaverService, config)
 
 app.use(session({
 	secret: process.env.SESSION_SECRET,
@@ -126,33 +129,9 @@ app.get('/ads-insights', async (req, res) => {
 // #endregion frontend
 
 // #region api
-
-app.post('/api/create-task', async (req, res) => {
+app.post('/api/task/create', async (req, res) => {
 	try {
-		const { google: { projectId, cloudTasks: { location, name } }, BASE_URL } = config
-
-		const parent = client.queuePath(projectId, location, name)
-		
-		const task = {
-			httpRequest: {
-				httpMethod: 'POST',
-				url: `${BASE_URL}/process-task`,
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: Buffer.from(JSON.stringify(req.body)).toString('base64'),
-			},
-			scheduleTime: {
-				seconds: Date.now() / 1000 + (req.body.delaySeconds || 0),
-			},
-		}
-
-		const request = {
-			parent,
-			task,
-		}
-
-		const [response] = await client.createTask(request)
+		const response = await tasksService.createTask(req.body, req.body.delaySeconds)
 		res.json({
 			success: true,
 			taskName: response.name,
@@ -166,6 +145,21 @@ app.post('/api/create-task', async (req, res) => {
 	}
 })
 
+app.post('/api/task/process', async (req, res) => {
+	try {
+		await tasksService.processTask(req.body.accountIds)
+		res.json({
+			success: true,
+			message: 'Task processed successfully'
+		})
+	} catch (error) {
+		console.error('Error processing task:', error)
+		res.status(500).json({
+			success: false,
+			error: error.message || 'Failed to process task'
+		})
+	}
+})
 // #endregion api
 
 app.listen(PORT, () => {

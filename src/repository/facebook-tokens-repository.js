@@ -36,4 +36,23 @@ export class TokensRepository {
 		}
 	}
 
+	/**
+	 * Fetches tokens that have access to specific ad accounts
+	 * @param {string} appId - The Facebook app ID
+	 * @param {string[]} adAccountIds - Array of ad account IDs to check
+	 * @returns {Promise<Array>} - Array of tokens with access to any of the specified accounts
+	 */
+	async fetchAdAccountTokens(appId, adAccountIds) {
+		const tokensRef = this.firestore.collection(collectionPath(this.network, appId))
+		const snapshot = await tokensRef
+			.where('ad_accounts', 'array-contains-any', adAccountIds)
+			// add where for user_id for security
+			.get()
+
+		return snapshot.docs.map(doc => ({
+			id: doc.id,
+			...doc.data()
+		}))
+	}
+
 }
