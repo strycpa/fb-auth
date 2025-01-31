@@ -1,3 +1,4 @@
+import { random } from 'lodash'
 import FacebookRemote from '../remote/facebook-remote.js'
 import { TokensRepository } from '../repository/facebook-tokens-repository.js'
 
@@ -59,7 +60,8 @@ export default class FacebookTokensService {
 			permissions: permissions.data.map((o) => o.permission),
 			comment: me.name,
 			ad_accounts: adAccounts.map(account => account.id),
-			businesses: uniqueBusinessIds
+			businesses: uniqueBusinessIds,
+			random: Math.random(),	// for picking random token
 		})
 
 		return me	// @todo strycp that doesn't seem to be right. leave it for now, refactor later

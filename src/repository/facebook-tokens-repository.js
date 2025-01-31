@@ -55,4 +55,27 @@ export class TokensRepository {
 		}))
 	}
 
+	/**
+	 * Fetches one random token that has access to specific ad account
+	 * @param {string} appId - The Facebook app ID
+	 * @param {string} adAccountId - The ad account ID
+	 * @returns {Promise<Array>} - One randomly picked token with access to the specified ad account
+	 */
+	async fetchOneAdAccountTokenRandom(appId, adAccountId) {
+		const tokensRef = this.firestore.collection(collectionPath(this.network, appId))
+		const snapshot = await tokensRef
+			.where('ad_accounts', 'array-contains', adAccountId)
+			// @todo strycp add where for user_id for security
+			.orderBy('random')
+			.limit(1)
+			.get()
+		if (!snapshot.docs.length) {
+			throw new Error(`No token found for ad account ${adAccountId}`)
+		}
+		return snapshot.docs.map(doc => ({
+			id: doc.id,
+			...doc.data()
+		}))
+	}
+
 }

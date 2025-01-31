@@ -29,7 +29,7 @@ const facebookAdsInsightsSaverService = new FacebookAdsInsightsSaverService(face
 
 const client = new CloudTasksClient()
 
-const tasksService = new TasksService(client, tokensRepository, facebookAdsInsightsSaverService, config)
+const tasksService = new TasksService(client, tokensRepository, facebookRemote, config)
 
 app.use(session({
 	secret: process.env.SESSION_SECRET,
@@ -131,7 +131,8 @@ app.get('/ads-insights', async (req, res) => {
 // #region api
 app.post('/api/task/create', async (req, res) => {
 	try {
-		const response = await tasksService.createTask(req.body, req.body.delaySeconds)
+		const {accountIds} = req.body	// choked here, only accountIds are passed
+		const response = await tasksService.createTask(accountIds)
 		res.json({
 			success: true,
 			taskName: response.name,

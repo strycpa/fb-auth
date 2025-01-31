@@ -3,7 +3,8 @@ export const config = {
 		APP_ID: process.env.APP_ID,
 		APP_SECRET: process.env.APP_SECRET,
 		REDIRECT_URL: process.env.REDIRECT_URL,
-		PERMISSIONS: ['ads_read', 'ads_management']
+		PERMISSIONS: ['ads_read', 'ads_management'],
+		maxMetrics: 50,
 	},
 	google: {
 		projectId: 'ravineo-tests',
