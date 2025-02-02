@@ -61,7 +61,7 @@ export default class TasksService {
 		// unfold the task if there are multiple accounts
 		if (Array.isArray(accountIds) && accountIds.length > 1) {
 			await Promise.all(accountIds.map(async (accountId) => {
-				await this.createTask([accountId], delaySeconds, breakdowns, periods, metrics)
+				await this.createTask([accountId], delaySeconds, breakdowns, periods, metrics)	// @todo strycp simplest recursive solution for now, but the roundtrip will be prohibitive in production
 			}))
 			return
 		}
@@ -69,7 +69,7 @@ export default class TasksService {
 		// unfold the task if there are multiple breakdowns
 		if (Array.isArray(breakdowns) && breakdowns.length > 1) {
 			await Promise.all(breakdowns.map(async (breakdown) => {
-				await this.createTask(accountIds, delaySeconds, [breakdown], periods, metrics)
+				await this.createTask(accountIds, delaySeconds, [breakdown], periods, metrics)	// @todo strycp simplest recursive solution for now, but the roundtrip will be prohibitive in production
 			}))
 			return
 		}
@@ -77,7 +77,7 @@ export default class TasksService {
 		// unfold the task if there are multiple periods
 		if (Array.isArray(periods) && periods.length > 1) {
 			await Promise.all(periods.map(async (period) => {
-				await this.createTask(accountIds, delaySeconds, breakdowns, [period], metrics)
+				await this.createTask(accountIds, delaySeconds, breakdowns, [period], metrics)	// @todo strycp simplest recursive solution for now, but the roundtrip will be prohibitive in production
 			}))
 			return
 		}
@@ -86,12 +86,22 @@ export default class TasksService {
 		if (Array.isArray(metrics) && metrics.length > this.config.facebook.maxMetrics) {
 			const chunkedMetrics = chunkArray(metrics, this.config.facebook.maxMetrics)	// fml, 500 from fb in case of all metrics
 			await Promise.all(chunkedMetrics.map(async (metricsChunk) => {
-				await this.createTask(accountIds, delaySeconds, breakdowns, periods, metricsChunk)
+				await this.createTask(accountIds, delaySeconds, breakdowns, periods, metricsChunk)	// @todo strycp simplest recursive solution for now, but the roundtrip will be prohibitive in production
 			}))
 			return
 		}
 
 		const accountId = accountIds[0]
+
+		// unfold the task to multiple tasks for each ad of the ad account
+		const ads = await this.facebookRemote.fetchGraphApi(`/${accountId}/ads`, { fields: ['ad_id', 'account_id'] })
+		if (Array.isArray(ads) && ads.length > 1) {
+			// await Promise.all(ads.map(async (period) => {
+			// 	await this.createTask(accountIds, delaySeconds, breakdowns, [period], metrics)	// @todo strycp simplest recursive solution for now, but the roundtrip will be prohibitive in production
+			// }))
+			// return
+		}
+
 		const period = periods[0]
 
 		const token = await this.tokensRepository.fetchOneAdAccountTokenRandom(this.config.facebook.APP_ID, accountId)
