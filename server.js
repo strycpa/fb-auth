@@ -148,7 +148,8 @@ app.post('/api/task/create', async (req, res) => {
 
 app.post('/api/task/process', async (req, res) => {
 	try {
-		await tasksService.processTask(req.body.accountIds)
+		const {accountIds, breakdowns, periods, metrics} = req.body
+		await tasksService.processTask(accountIds, breakdowns, periods, metrics)
 		res.json({
 			success: true,
 			message: 'Task processed successfully'

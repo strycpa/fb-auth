@@ -1,6 +1,7 @@
 import zodSchemas from '../../lib/zod-schemas.js'
 import { BREAKDOWNS } from '../../lib/const/breakdowns.js'
 import { PERIODS } from '../../lib/const/periods.js'
+import { chunkArray } from '../../lib/utils.js'
 
 export default class TasksService {
 	/**
@@ -20,8 +21,8 @@ export default class TasksService {
 	async createTask(
 		accountIds, 
 		delaySeconds = 0, 
-		breakdowns = Object.keys(BREAKDOWNS), 
-		periods = Object.keys(PERIODS), 
+		breakdowns = BREAKDOWNS, 
+		periods = PERIODS, 
 		metrics = Object.keys(zodSchemas.metrics)
 	) {
 		const { google: { projectId, cloudTasks: { location, name } }, BASE_URL } = this.config
@@ -51,6 +52,7 @@ export default class TasksService {
 	}
 
 	async processTask(accountIds, breakdowns, periods, metrics) {
+		const delaySeconds = 0	// @todo strycp this should be set up by some heuristic
 
 		if (!Array.isArray(accountIds) || accountIds.length === 0) {
 			throw new Error('Invalid or empty accountIds')
@@ -59,7 +61,7 @@ export default class TasksService {
 		// unfold the task if there are multiple accounts
 		if (Array.isArray(accountIds) && accountIds.length > 1) {
 			await Promise.all(accountIds.map(async (accountId) => {
-				await this.createTask([accountId], breakdowns, periods, metrics)
+				await this.createTask([accountId], delaySeconds, breakdowns, periods, metrics)
 			}))
 			return
 		}
@@ -67,7 +69,7 @@ export default class TasksService {
 		// unfold the task if there are multiple breakdowns
 		if (Array.isArray(breakdowns) && breakdowns.length > 1) {
 			await Promise.all(breakdowns.map(async (breakdown) => {
-				await this.createTask(accountIds, [breakdown], periods, metrics)
+				await this.createTask(accountIds, delaySeconds, [breakdown], periods, metrics)
 			}))
 			return
 		}
@@ -75,17 +77,16 @@ export default class TasksService {
 		// unfold the task if there are multiple periods
 		if (Array.isArray(periods) && periods.length > 1) {
 			await Promise.all(periods.map(async (period) => {
-				await this.createTask(accountIds, breakdowns, [period], metrics)
+				await this.createTask(accountIds, delaySeconds, breakdowns, [period], metrics)
 			}))
 			return
 		}
 
 		// unfold the task if there are more metrics than the fb api is able to handle in one call
-		// @todo strycp this doesn't work like that, we need to chunk the metrics and make multiple calls
 		if (Array.isArray(metrics) && metrics.length > this.config.facebook.maxMetrics) {
-			const chunkedMetrics = chunkArray(metrics, this.config.facebook.maxMetrics)	// @todo strycp fml, 500 from fb in case of all metrics
+			const chunkedMetrics = chunkArray(metrics, this.config.facebook.maxMetrics)	// fml, 500 from fb in case of all metrics
 			await Promise.all(chunkedMetrics.map(async (metricsChunk) => {
-				await this.createTask(accountIds, breakdowns, periods, metricsChunk)
+				await this.createTask(accountIds, delaySeconds, breakdowns, periods, metricsChunk)
 			}))
 			return
 		}
