@@ -1,39 +1,74 @@
-const collectionPath = (network, appId) => `tokens/${network}/apps/${appId}/users`
+const COLLECTION_PATH = 'tokens_facebook'
 
 export class TokensRepository {
-
-	constructor (firestore, network) {
+	constructor(firestore) {
 		this.firestore = firestore
-		this.network = network
+		this.collection = this.firestore.collection(COLLECTION_PATH)
 	}
 
-	async fetchToken (userId, appId) {
-		const token = await this.firestore.collection(collectionPath(this.network, appId)).doc(userId).get()
-		if (!token.exists) {
-			throw new Error(`Token not found for user id ${userId} and app id ${appId}`)
-		}
-		return token.data()
-	} 
+	async fetchToken(appId, userId) {
+		const snapshot = await this.collection
+			.where('app_id', '==', appId)
+			.where('user_id', '==', userId)
+			.limit(1)
+			.get()
 
-	async saveToken (userId, appId, data) {
-		const existingToken = await this.firestore.collection(collectionPath(this.network, appId)).doc(userId).get()
-		if (!existingToken.exists) {
-			const insertedToken = await existingToken.ref.create({
+		if (snapshot.empty) {
+			throw new Error(`Token not found for app id ${appId} and user id ${userId}`)
+		}
+
+		return snapshot.docs[0].data()
+	}
+
+	async saveToken(appId, userId, data) {
+		const snapshot = await this.collection
+			.where('app_id', '==', appId)
+			.where('user_id', '==', userId)
+			.limit(1)
+			.get()
+
+		if (snapshot.empty) {
+			await this.collection.add({
 				...data,
-				user_id: userId,
 				app_id: appId,
-				created_at: new Date(),
+				user_id: userId,
+				created_at: new Date()
 			})
-			console.log('insertedToken'); console.dir(insertedToken, {depth: null})
-			return insertedToken
 		} else {
-			const updatedToken = await existingToken.ref.update({
+			await snapshot.docs[0].ref.update({
 				...data,
-				updated_at: new Date(),
+				updated_at: new Date()
 			})
-			console.log('updatedToken'); console.dir(updatedToken, {depth: null})
-			return updatedToken
 		}
 	}
 
+	async fetchAdAccountTokens(appId, adAccountIds) {
+		const snapshot = await this.collection
+			.where('app_id', '==', appId)
+			.where('ad_accounts', 'array-contains-any', adAccountIds)
+			.get()
+
+		return snapshot.docs.map(doc => ({
+			id: doc.id,
+			...doc.data()
+		}))
+	}
+
+	async fetchOneAdAccountTokenRandom(appId, adAccountId) {
+		const snapshot = await this.collection
+			.where('app_id', '==', appId)
+			.where('ad_accounts', 'array-contains', adAccountId)
+			.orderBy('random')
+			.limit(1)
+			.get()
+
+		if (snapshot.empty) {
+			throw new Error(`No token found for ad account ${adAccountId}`)
+		}
+
+		return snapshot.docs.map(doc => ({
+			id: doc.id,
+			...doc.data()
+		}))
+	}
 }

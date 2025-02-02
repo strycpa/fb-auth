@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Facebook Ads Insights Tool</title>
+	<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+	<div id="fb-root"></div>
+	<script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v22.0&appId=<%= appId %>"></script>
+
+	<div class="min-h-screen flex items-center justify-center">
+		<div class="max-w-2xl mx-auto p-8 bg-white rounded-lg shadow-sm">
+			<h1 class="text-3xl font-bold text-gray-900 mb-4">Facebook Ads Insights Tool</h1>
+			
+			<div class="space-y-4 text-gray-600 mb-8">
+				<p class="leading-relaxed">
+					Connect your Facebook account to access detailed insights about your ad insights. 
+					This tool allows you to:
+				</p>
+				<ul class="list-disc list-inside space-y-2 ml-4">
+					<li>View both personal and business ad accounts</li>
+					<li>Access detailed metrics for your ads</li>
+					<li>Analyze performance across multiple accounts</li>
+				</ul>
+			</div>
+
+			<div class="border-t border-gray-200 pt-6">
+				<div class="flex items-center justify-between">
+					<p class="text-sm text-gray-500">
+						Secure login with Facebook required
+					</p>
+					<div class="fb-login-button" 
+						 data-size="large" 
+						 data-auto-logout-link="false" 
+						 data-use-continue-as="true" 
+						 data-onlogin="checkLoginState"
+						 data-scope="<%= scope %>"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		window.fbAsyncInit = function() {
+			FB.init({
+				appId: '<%= appId %>',
+				cookie: true,
+				xfbml: true,
+				version: 'v22.0'
+			});
+
+			FB.getLoginStatus(function(response) {
+				statusChangeCallback(response);
+			});
+		};
+
+		function statusChangeCallback(response) {
+			console.log('Login status:', response);
+			if (response.status === 'connected') {
+				window.location.href = `/auth/callback?access_token=${response.authResponse.accessToken}`;
+			}
+		}
+
+		function checkLoginState() {
+			FB.getLoginStatus(function(response) {
+				statusChangeCallback(response);
+			});
+		}
+	</script>
+
+</body>
+</html>

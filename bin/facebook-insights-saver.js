@@ -88,7 +88,7 @@ try {
 		const breakdownName = breakdowns.join('_')
 		const tableName = `facebook_ads_insights_${period}_${breakdownName}`
 		if (!tables[tableName]) {
-			const fullyQualifiedTableName = `${config.projectId}.facebook_ads_insights.${tableName}`
+			const fullyQualifiedTableName = `${config.google.projectId}.${config.google.bigQuery.datasetId}.${tableName}`
 			const schema = zodSchemas.schemas[tableName]
 			const table = await bigQuery.getTable(fullyQualifiedTableName, schema)
 			tables[tableName] = table

@@ -38,15 +38,29 @@ export default class FacebookTokensService {
 	 */
 	async storeToken(appId, accessToken) {
 		const f = this.facebookRemote.createFetchGraphApi(accessToken)
-		const [ me, permissions ] = await Promise.all([
+		const [ me, permissions, adAccounts ] = await Promise.all([
 			f('/me'),
 			f('/me/permissions'),
+			f('/me/adaccounts', {
+				fields: 'id,name,business{id,name}'  // Add fields we need
+			})
 		])
 
-		await this.facebookTokensRepository.saveToken(me.id, appId, {
+		// Extract unique business IDs directly from adAccounts array
+		const businessIds = adAccounts
+			.filter(account => account.business)
+			.map(account => account.business.id)
+		
+		// Remove duplicates from business IDs
+		const uniqueBusinessIds = [...new Set(businessIds)]
+
+		await this.facebookTokensRepository.saveToken(appId, me.id, {
 			access_token: accessToken, 
 			permissions: permissions.data.map((o) => o.permission),
-			comment: me.name
+			comment: me.name,
+			ad_accounts: adAccounts.map(account => account.id),
+			businesses: uniqueBusinessIds,
+			random: Math.random(),	// for picking random token
 		})
 
 		return me	// @todo strycp that doesn't seem to be right. leave it for now, refactor later
