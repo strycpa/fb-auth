@@ -1,6 +1,6 @@
-import { zodSchemas } from '../utils/zod-schemas.js'
-import { BREAKDOWNS } from '../lib/const/breakdowns.js'
-import { PERIODS } from '../lib/const/periods.js'
+import zodSchemas from '../../lib/zod-schemas.js'
+import { BREAKDOWNS } from '../../lib/const/breakdowns.js'
+import { PERIODS } from '../../lib/const/periods.js'
 
 export default class TasksService {
 	/**

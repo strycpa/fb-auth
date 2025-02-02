@@ -1,4 +1,3 @@
-import { random } from 'lodash'
 import FacebookRemote from '../remote/facebook-remote.js'
 import { TokensRepository } from '../repository/facebook-tokens-repository.js'
 
