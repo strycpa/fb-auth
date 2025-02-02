@@ -54,7 +54,7 @@ export default class FacebookTokensService {
 		// Remove duplicates from business IDs
 		const uniqueBusinessIds = [...new Set(businessIds)]
 
-		await this.facebookTokensRepository.saveToken(me.id, appId, {
+		await this.facebookTokensRepository.saveToken(appId, me.id, {
 			access_token: accessToken, 
 			permissions: permissions.data.map((o) => o.permission),
 			comment: me.name,

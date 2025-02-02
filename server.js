@@ -78,7 +78,7 @@ app.get('/ad-accounts', async (req, res) => {
 	}
 
 	try {
-		const token = await tokensRepository.fetchToken(req.session.user.id, config.facebook.APP_ID)
+		const token = await tokensRepository.fetchToken(config.facebook.APP_ID, req.session.user.id)
 		
 		const [personalAccounts, businessAccounts] = await Promise.all([
 			facebookAdsInsightsSaverService.fetchPersonalAdaccounts(token.access_token),
@@ -106,7 +106,7 @@ app.get('/ads-insights', async (req, res) => {
 	}
 
 	try {
-		const token = await tokensRepository.fetchToken(req.session.user.id, config.facebook.APP_ID)
+		const token = await tokensRepository.fetchToken(config.facebook.APP_ID, req.session.user.id)
 		const accountIds = Array.isArray(selectedAccounts) ? selectedAccounts : [selectedAccounts]
 		const selectedAdAccounts = accountIds.map(id => ({ id }))
 		
