@@ -1,3 +1,5 @@
+import 'dotenv/config'
+
 export const config = {
 	facebook: {
 		APP_ID: process.env.APP_ID,

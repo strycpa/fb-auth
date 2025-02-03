@@ -45,6 +45,15 @@ export default class FacebookAdsInsightsSaverService {
 		return [...personalAdAccounts, ...businessAdAccounts]
 	}
 
+	/**
+	 * @todo strycp for now it's choked on only one ad and no breakdowns to avoid tripping the limits
+	 * Fetches all ads and their associated metrics for given ad accounts in all the used breakdowns and periods
+	 * 
+	 * @param {Array<{id: string}>} allAdAccounts - Array of ad account objects containing their IDs
+	 * @param {string} accessToken - Facebook access token for authentication
+	 * @param {Object} [params={}] - Optional parameters to pass to the Facebook API insights request
+	 * @returns {Promise<Array<Object>>} Array of ads with their metrics data merged
+	 */
 	async fetchAllAdsWithMetrics (allAdAccounts, accessToken, params = {}) {
 		const allAds = (await paralellize(allAdAccounts, ({id}) => this.facebookRemote.fetchGraphApi(`/${id}/ads`, accessToken, {fields: ['ad_id', 'account_id']}))).flat()
 		

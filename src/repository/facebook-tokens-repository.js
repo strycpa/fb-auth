@@ -69,6 +69,6 @@ export class TokensRepository {
 		return snapshot.docs.map(doc => ({
 			id: doc.id,
 			...doc.data()
-		}))
+		}))[0]
 	}
 }
