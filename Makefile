@@ -19,7 +19,7 @@ deploy:
 		--set-secrets APP_SECRET=fb_app_secret:latest \
 		--command node,passport.js
 
-deploy-job:
+deploy-job-fb-ads-insights:
 	gcloud run jobs deploy fb-ads-insights \
 		--source . \
 		--project ravineo-tests \

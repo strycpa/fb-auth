@@ -21,8 +21,7 @@ const processJob = async (adAccountId) => {
 	const token = await facebookTokensRepository.fetchOneAdAccountTokenRandom(config.facebook.APP_ID, adAccountId)
 	if (!token) throw new Error(`Token not found for app id ${config.facebook.APP_ID} and ad account id ${adAccountId}`)
 
-	const allAdsWithMetrics = await facebookAdsInsightsSaverService.fetchAllAdsWithMetrics([{ id: adAccountId }], token.access_token)
-	console.log('allAdsWithMetrics'); console.dir(allAdsWithMetrics, { depth: null })
+	await facebookAdsInsightsSaverService.fetchAllAdsWithMetricsPeriodsBreakdowns([{ id: adAccountId }], token.access_token)
 }
 
 program

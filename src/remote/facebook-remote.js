@@ -93,13 +93,13 @@ export default class FacebookRemote {
 		}
 		const json = await response.json()
 		const {data, paging} = json
-		if (!paging) return json
+		if (!paging) return data
 		if (paging?.cursors?.after && paging.cursors.after !== EMPTY_CURSOR) {
 			const secondResponse = await this.fetchGraphApi(fragment, accessToken, {
 				...params,
 				after: paging.cursors.after,
 			})
-			return [...data, ...secondResponse.data]
+			return [...data, ...secondResponse]
 		}
 		return data
 	}
