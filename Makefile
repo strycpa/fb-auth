@@ -27,7 +27,7 @@ deploy-job:
 		--parallelism 0 \
 		--max-retries 0 \
 		--task-timeout 6h \
-		--set-env-vars GOOGLE_CLOUD_PROJECT=ravineo-media \
+		--set-env-vars GOOGLE_CLOUD_PROJECT=ravineo-tests \
 		--set-secrets APP_ID=fb_app_id:latest \
 		--set-secrets APP_SECRET=fb_app_secret:latest \
 		--command node,jobs/fb-ads-insights.js 
